@@ -24,9 +24,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. INICIALIZACIÓN DE ESTADO
+# 2. INICIALIZACIÓN DE ESTADO (PERSISTENCIA DE NOMBRES)
 if 'js' not in ss:
-    ss.js = [{"id":i,"n":f"J{i+1}","t_total":0.0,"ini":None,"p":False,"g":0,"t":0,"per":0,"rec":0} for i in range(14)]
+    # Si quieres dejar nombres fijos por defecto, cámbialos aquí:
+    ss.js = [{"id":i,"n":f"Jugador {i+1}","t_total":0.0,"ini":None,"p":False,"g":0,"t":0,"per":0,"rec":0} for i in range(14)]
 if 'ml' not in ss: ss.ml, ss.mr, ss.fl, ss.fr = 0, 0, 0, 0
 if 'tiempo_acumulado' not in ss: ss.tiempo_acumulado = 0.0
 if 'inicio_cronometro' not in ss: ss.inicio_cronometro = None
@@ -42,8 +43,14 @@ h1, h2, h3 = st.columns([1, 4, 1])
 h1.image("https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/1200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png", width=60)
 with h2:
     r_nom = st.text_input("RIVAL", "RIVAL", label_visibility="collapsed").upper()
-if h3.button("RESET TOTAL"):
-    ss.clear()
+if h3.button("🔄 RESET"):
+    # Resetear solo estadísticas, mantener nombres
+    for j in ss.js:
+        j.update({"t_total":0.0,"ini":None,"p":False,"g":0,"t":0,"per":0,"rec":0})
+    ss.ml, ss.mr, ss.fl, ss.fr = 0, 0, 0, 0
+    ss.tiempo_acumulado = 0.0
+    ss.inicio_cronometro = None
+    ss.corriendo = False
     st.rerun()
 
 # 4. MARCADOR Y CONTROL DE TIEMPO
@@ -60,20 +67,21 @@ with m2:
     
     col_p1, col_p2 = st.columns(2)
     if not ss.corriendo:
-        if col_p1.button("▶ INICIAR", type="primary", use_container_width=True):
+        if col_p1.button("▶ INICIAR", type="primary"):
             ss.inicio_cronometro = time.time()
             ss.corriendo = True
             for j in ss.js:
                 if j["p"]: j["ini"] = time.time()
             st.rerun()
     else:
-        if col_p2.button("⏸ PAUSAR", type="secondary", use_container_width=True):
+        if col_p2.button("⏸ PAUSAR", type="secondary"):
             ss.tiempo_acumulado += time.time() - ss.inicio_cronometro
             ss.corriendo = False
             for j in ss.js:
                 if j["p"] and j["ini"]:
                     j["t_total"] += time.time() - j["ini"]
                     j["ini"] = None
+            ss.ig = None
             st.rerun()
 
 with m3:
@@ -93,13 +101,14 @@ for i, j in enumerate(ss.js):
         st.markdown(f"<div class='jugador-card' style='border-left: 5px solid {color_borde};'>", unsafe_allow_html=True)
         
         c_n, c_t = st.columns([2, 1])
+        # El nombre se guarda automáticamente en ss.js al cambiar el texto
         j["n"] = c_n.text_input(f"n{i}", j["n"], key=f"n{i}", label_visibility="collapsed")
         
         t_ind = j["t_total"]
         if ss.corriendo and j["p"] and j["ini"]:
             t_ind += time.time() - j["ini"]
         mj, sj = divmod(int(t_ind), 60)
-        c_t.markdown(f"<div style='text-align:right;'>{mj:02d}:{sj:02d}</div>", unsafe_allow_html=True)
+        c_t.markdown(f"<div style='text-align:right; font-weight:bold;'>{mj:02d}:{sj:02d}</div>", unsafe_allow_html=True)
         
         s1, s2, s3, s4, s5 = st.columns([1,1,1,1,1.5])
         if s1.button("🎯", key=f"t{i}"): j["t"]+=1
@@ -121,6 +130,6 @@ for i, j in enumerate(ss.js):
 
 # 6. EXPORTAR
 st.divider()
-if st.button("💾 GENERAR INFORME CSV", use_container_width=True):
+if st.button("💾 FINALIZAR PARTIDO Y GUARDAR CSV", use_container_width=True):
     df = pd.DataFrame([{"Jugador":x["n"],"Goles":x["g"],"Tiros":x["t"],"Robos":x["rec"],"Perdidas":x["per"],"Min":round(x["t_total"]/60,1)} for x in ss.js])
-    st.download_button("Descargar Archivo", df.to_csv(index=False).encode('utf-8'), f"LUD_{r_nom}.csv", "text/csv")
+    st.download_button("Click aquí para descargar", df.to_csv(index=False).encode('utf-8'), f"LUD_{r_nom}.csv", "text/csv")
