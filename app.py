@@ -3,7 +3,7 @@ import pandas as pd
 import time
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD", layout="wide")
+st.set_page_config(page_title="LUD FS", layout="wide")
 st_autorefresh(interval=1000, key="f5")
 s = st.session_state
 
@@ -15,7 +15,7 @@ if 'js' not in s:
 ah = time.time()
 td = s.ta + (ah - s.ic if s.on and s.ic else 0)
 
-# CABECERA
+# CABECERA Y RESET
 c1, c2 = st.columns([4,1])
 rv = c1.text_input("RIVAL", "RIVAL").upper()
 if c2.button("RESET"): s.clear(); st.rerun()
@@ -44,29 +44,41 @@ else:
 m3.metric(rv[:8], s.mr)
 if m3.button(f"⚽ GOL {rv[:3]}"): s.mr+=1; st.rerun()
 
-# JUGADORES
+# CONTADOR DE PISTA
 st.divider()
+en_pista = sum(1 for x in s.js if x["p"])
+st.subheader(f"🏃 JUGADORES EN PISTA: {en_pista} / 5")
+
+# JUGADORES
 cols = st.columns(3)
 for idx, j in enumerate(s.js):
     with cols[idx % 3]:
         with st.container(border=True):
-            st.write(f"{'🟢' if j['p'] else '🔴'} **{j['n']}**")
+            # Tiempo individual
+            tt = j["t"] + (ah - j["i"] if s.on and j["p"] and j["i"] else 0)
+            mj, sj = divmod(int(tt), 60)
             
-            # Scouting rapido
-            c_s1, c_s2, c_s3, c_s4 = st.columns(4)
-            if c_s1.button("🎯", key=f"t{idx}"): j["s"]+=1
-            if c_s2.button("🛡️", key=f"r{idx}"): j["r"]+=1
-            if c_s3.button("❌", key=f"e{idx}"): j["e"]+=1
-            if c_s4.button("⚽", key=f"g{idx}"): j["g"]+=1; s.ml+=1; st.rerun()
+            c_nom, c_t = st.columns([1.5, 1])
+            c_nom.write(f"{'🟢' if j['p'] else '🔴'} **{j['n']}**")
+            c_t.write(f"⏱️ **{mj:02d}:{sj:02d}**")
+            
+            # Scouting
+            s1, s2, s3, s4 = st.columns(4)
+            if s1.button("🎯", key=f"t{idx}"): j["s"]+=1
+            if s2.button("🛡️", key=f"r{idx}"): j["r"]+=1
+            if s3.button("❌", key=f"e{idx}"): j["e"]+=1
+            if s4.button("⚽", key=f"g{idx}"): j["g"]+=1; s.ml+=1; st.rerun()
             
             # Cambio
-            if st.button("CAMBIO PISTA/BANCO", key=f"c{idx}", use_container_width=True):
-                if not j["p"] and sum(1 for x in s.js if x["p"]) < 5:
+            btn_txt = "SALIR AL BANCO" if j["p"] else "ENTRAR A PISTA"
+            if st.button(btn_txt, key=f"c{idx}", use_container_width=True):
+                if not j["p"] and en_pista < 5:
                     j["p"], j["i"] = True, (ah if s.on else None)
                 elif j["p"]:
                     if s.on and j["i"]: j["t"] += ah - j["i"]
                     j["p"], j["i"] = False, None
                 st.rerun()
 
-if st.button("💾 DESCARGAR CSV"):
-    st.download_button("BAJAR", pd.DataFrame(s.js).to_csv().encode('utf-8'), "LUD.csv")
+if st.button("💾 DESCARGAR RESULTADOS"):
+    df = pd.DataFrame(s.js)
+    st.download_button("BAJAR CSV", df.to_csv(index=False).encode('utf-8'), "partido.csv")
