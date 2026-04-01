@@ -1,4 +1,4 @@
-import st as st
+import streamlit as st
 import pandas as pd
 import time
 from datetime import datetime
@@ -58,16 +58,16 @@ with m2:
     mm, ss_proc = divmod(int(tiempo_display), 60)
     st.markdown(f"<div class='marcador-container'><h1 style='font-size:4rem; margin:0;'>{mm:02d}:{ss_proc:02d}</h1></div>", unsafe_allow_html=True)
     
-    col_play, col_pause = st.columns(2)
+    col_p1, col_p2 = st.columns(2)
     if not ss.corriendo:
-        if col_play.button("▶ INICIAR", type="primary", use_container_width=True):
+        if col_p1.button("▶ INICIAR", type="primary", use_container_width=True):
             ss.inicio_cronometro = time.time()
             ss.corriendo = True
             for j in ss.js:
                 if j["p"]: j["ini"] = time.time()
             st.rerun()
     else:
-        if col_pause.button("⏸ PAUSAR", type="secondary", use_container_width=True):
+        if col_p2.button("⏸ PAUSAR", type="secondary", use_container_width=True):
             ss.tiempo_acumulado += time.time() - ss.inicio_cronometro
             ss.corriendo = False
             for j in ss.js:
@@ -77,15 +77,14 @@ with m2:
             st.rerun()
 
 with m3:
-    # LÍNEA CORREGIDA AQUÍ ABAJO (Línea 84 aprox.)
     st.markdown(f"<h2 style='text-align:center; color:#7A0019;'>{r_nom[:6]}: {ss.mr}</h2>", unsafe_allow_html=True)
     if st.button(f"⚽ GOL {r_nom[:3]}", key="btn_gol_r"): ss.mr += 1; st.rerun()
     if st.button(f"⚠️ FALTAS: {ss.fr}", key="btn_fal_r"): ss.fr += 1; st.rerun()
 
-# 5. JUGADORES (Layout 3 columnas)
+# 5. JUGADORES
 st.divider()
 ep = sum(1 for j in ss.js if j["p"])
-st.markdown(f"<div style='text-align:center;'><b>👥 EN PISTA: {ep}/5</b></div>", unsafe_allow_html=True)
+st.markdown(f"<div style='text-align:center; margin-bottom:10px;'><b>👥 EN PISTA: {ep}/5</b></div>", unsafe_allow_html=True)
 
 cols = st.columns(3)
 for i, j in enumerate(ss.js):
@@ -102,12 +101,11 @@ for i, j in enumerate(ss.js):
         mj, sj = divmod(int(t_ind), 60)
         c_t.markdown(f"<div style='text-align:right;'>{mj:02d}:{sj:02d}</div>", unsafe_allow_html=True)
         
-        # Scouting e Interruptor de Pista
         s1, s2, s3, s4, s5 = st.columns([1,1,1,1,1.5])
-        if s1.button("🎯", key=f"tiro{i}"): j["t"]+=1
-        if s2.button("🛡️", key=f"robo{i}"): j["rec"]+=1
-        if s3.button("❌", key=f"perd{i}"): j["per"]+=1
-        if s4.button("⚽", key=f"golj{i}"): j["g"]+=1; ss.ml+=1; st.rerun()
+        if s1.button("🎯", key=f"t{i}"): j["t"]+=1
+        if s2.button("🛡️", key=f"r{i}"): j["rec"]+=1
+        if s3.button("❌", key=f"p{i}"): j["per"]+=1
+        if s4.button("⚽", key=f"g{i}"): j["g"]+=1; ss.ml+=1; st.rerun()
         
         btn_label = "BANCO" if j["p"] else "PISTA"
         if s5.button(btn_label, key=f"bt{i}"):
@@ -122,7 +120,7 @@ for i, j in enumerate(ss.js):
         st.markdown("</div>", unsafe_allow_html=True)
 
 # 6. EXPORTAR
-st.write("")
+st.divider()
 if st.button("💾 GENERAR INFORME CSV", use_container_width=True):
     df = pd.DataFrame([{"Jugador":x["n"],"Goles":x["g"],"Tiros":x["t"],"Robos":x["rec"],"Perdidas":x["per"],"Min":round(x["t_total"]/60,1)} for x in ss.js])
     st.download_button("Descargar Archivo", df.to_csv(index=False).encode('utf-8'), f"LUD_{r_nom}.csv", "text/csv")
