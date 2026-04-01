@@ -1,3 +1,7 @@
+import streamlit as st
+import pandas as pd
+import time
+from streamlit_autorefresh import st_autorefresh
 # 3. MARCADOR Y RELOJ CENTRAL
 with st.container():
     m_col1, m_col2, m_col3 = st.columns([2, 2, 2])
