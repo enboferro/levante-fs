@@ -2,13 +2,20 @@ import streamlit as st
 import pandas as pd
 import time
 
-st.set_page_config(page_title="LUD", layout="wide")
-ss = st.session_state
+# 1. TEMA Y ESTILOS (Al principio para que no falle)
+if 'tm' not in st.session_state: st.session_state.tm = "Oscuro"
 
-# 1. TEMA
-if 'tm' not in ss: ss.tm = "Oscuro"
-bg, tx = ("#1E1E1E","#FFF") if ss.tm=="Oscuro" else ("#FFF","#000")
-st.markdown(f"<style>.stApp{{background:{bg};}} h1,h2,h3,p,b,span{{color:{tx}!important;}} .reloj{{font-size:50px;color:red;text-align:center;}}</style>",unsafe_allow_html=True)
+t = st.session_state.tm
+bg, tx, cd = ("#1E1E1E","#FFF","#333") if t=="Oscuro" else ("#FFF","#000","#EEE")
+
+st.markdown(f"""<style>
+    .stApp {{background-color: {bg} !important;}}
+    h1,h2,h3,p,b,span,div {{color: {tx} !important;}}
+    .reloj {{font-size:50px; color:red; text-align:center; font-weight:bold;}}
+    [data-testid="stExpander"] {{background-color: {cd} !important; border-radius:10px;}}
+</style>""", unsafe_allow_html=True)
+
+ss = st.session_state
 
 # 2. DATA
 if 'js' not in ss:
@@ -17,15 +24,17 @@ if 'rt1' not in ss: ss.rt1, ss.rt2, ss.pt = 0.0, 0.0, "T1"
 if 'ml' not in ss: ss.ml, ss.mr, ss.fl, ss.fr = 0, 0, 0, 0
 if 'ac' not in ss: ss.ac, ss.ig = False, None
 
-# 3. INTERFAZ SUPERIOR
-ss.tm = st.selectbox("Modo:", ["Oscuro", "Claro"])
-st.write(f"LUD: {ss.ml} | RIV: {ss.mr} | PARTE: {ss.pt}")
+# 3. MENÚ DE APARIENCIA
+ss.tm = st.selectbox("Cambiar Color:", ["Oscuro", "Claro"])
 
-if st.button("+GOL LUD"): ss.ml+=1; st.rerun()
-if st.button("+FALTA LUD"): ss.fl+=1; st.rerun()
+# 4. MARCADOR
+st.write(f"### {ss.pt} | LUD: {ss.ml} - RIV: {ss.mr}")
+c1, c2 = st.columns(2)
+if c1.button("+GOL LUD"): ss.ml+=1; st.rerun()
+if c2.button("+FALTA LUD"): ss.fl+=1; st.rerun()
 ss.pt = st.radio("Parte:",["T1","T2"], horizontal=True)
 
-# 4. RELOJ
+# 5. RELOJ
 tg = ss.rt1 if ss.pt=="T1" else ss.rt2
 if ss.ac and ss.ig: tg += time.time()-ss.ig
 m, s = divmod(int(tg), 60)
@@ -50,16 +59,16 @@ else:
                 j["ini"] = None
         ss.ig = None; st.rerun()
 
-# 5. JUGADORES
+# 6. JUGADORES
 ep = sum(1 for j in ss.js if j["p"])
 st.write(f"En pista: {ep}/5")
 
 for i, j in enumerate(ss.js):
-    with st.expander(f"{j['n']} - {int(j['t1']+j['t2'])}s"):
+    with st.expander(f"{j['n']} | G:{j['g']} | T:{j['t']}"):
         j["n"] = st.text_input("Nom:", j["n"], key=f"n{i}")
-        if st.button(f"🎯 Tiros: {j['t']}", key=f"t{i}"): j["t"]+=1; st.rerun()
-        if st.button(f"⚠️ Perd: {j['per']}", key=f"p{i}"): j["per"]+=1; st.rerun()
-        if st.button(f"🛡️ Rec: {j['rec']}", key=f"r{i}"): j["rec"]+=1; st.rerun()
+        if st.button(f"🎯 TIRO", key=f"t{i}"): j["t"]+=1; st.rerun()
+        if st.button(f"⚠️ PERD", key=f"p{i}"): j["per"]+=1; st.rerun()
+        if st.button(f"🛡️ REC", key=f"r{i}"): j["rec"]+=1; st.rerun()
         if st.button(f"⚽ GOL", key=f"g{i}"): j["g"]+=1; ss.ml+=1; st.rerun()
         
         txt = "SALIR 🔴" if j["p"] else "ENTRAR 🟢"
@@ -75,7 +84,7 @@ for i, j in enumerate(ss.js):
                     else: j["t2"]+=now-j["ini"]
                 j["p"], j["ini"] = False, None; st.rerun()
 
-# 6. EXPORT
+# 7. EXPORT
 if st.button("💾 EXCEL"):
     df = pd.DataFrame(ss.js)
     st.download_button("Bajar", df.to_csv().encode('utf-8'), "lud.csv")
