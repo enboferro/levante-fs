@@ -1,73 +1,96 @@
 import streamlit as st
 import pandas as pd
 import time
-from datetime import datetime
 
-# Configuración para iPad
-st.set_page_config(page_title="LUD FS - Control", layout="wide")
+st.set_page_config(page_title="LUD FS", layout="wide")
 
-# Estilos para que los números se vean oscuros y grandes
-st.markdown("""
-    <style>
-    .stButton>button { width: 100%; border-radius: 10px; font-weight: bold; }
-    h1, h2, h3 { color: #000000 !important; }
-    .tiempo-label { font-size: 24px; font-weight: bold; color: #000000; }
-    </style>
-    """, unsafe_allow_html=True)
+# Estilos para números oscuros
+st.markdown("<style>h1,h2,h3,p{color:black!important;}</style>",unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN ---
-if 'jugadores' not in st.session_state:
-    st.session_state.jugadores = [
-        {"id": i, "nombre": f"Jugador {i+1}", "t1": 0.0, "t2": 0.0, 
-         "inicio": None, "pista": False, "ent": 0, "goles": 0} for i in range(14)
-    ]
-if 'parte' not in st.session_state: st.session_state.parte = "1ª Parte"
-if 'f_lud' not in st.session_state: st.session_state.f_lud = 0
-if 'f_riv' not in st.session_state: st.session_state.f_riv = 0
-if 'm_lud' not in st.session_state: st.session_state.m_lud = 0
-if 'm_riv' not in st.session_state: st.session_state.m_riv = 0
-if 'activo' not in st.session_state: st.session_state.activo = False
+if 'js' not in st.session_state:
+    st.session_state.js = [{"id":i,"n":f"Jug {i+1}","t1":0.0,"t2":0.0,"ini":None,"p":False,"e":0,"g":0} for i in range(14)]
+if 'pt' not in st.session_state: st.session_state.pt = "T1"
+if 'ml' not in st.session_state: st.session_state.ml = 0
+if 'mr' not in st.session_state: st.session_state.mr = 0
+if 'fl' not in st.session_state: st.session_state.fl = 0
+if 'fr' not in st.session_state: st.session_state.fr = 0
+if 'ac' not in st.session_state: st.session_state.ac = False
 
-# --- CABECERA Y MARCADOR ---
-st.title("🐸 LUD FS - Match Center")
+st.title("🐸 LUD FS - Control")
 
-# Selector de Parte del Partido
-st.session_state.parte = st.radio("Periodo Actual:", ["1ª Parte", "2ª Parte"], horizontal=True)
+# Marcador y Faltas
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.subheader(f"LUD: {st.session_state.ml}")
+    if st.button("+GOL LUD"): st.session_state.ml+=1; st.rerun()
+    st.write(f"Faltas: {st.session_state.fl}")
+    if st.button("+FL"): st.session_state.fl+=1; st.rerun()
+with c2:
+    st.session_state.pt = st.radio("Parte:",["T1","T2"])
+    if st.button("RESET"): st.session_state.clear(); st.rerun()
+with c3:
+    st.subheader(f"RIV: {st.session_state.mr}")
+    if st.button("+GOL RIV"): st.session_state.mr+=1; st.rerun()
+    st.write(f"Faltas: {st.session_state.fr}")
+    if st.button("+FR"): st.session_state.fr+=1; st.rerun()
 
-with st.container(border=True):
-    c1, c2, c3 = st.columns([2, 1, 2])
-    with c1:
-        st.subheader("🏠 LEVANTE UD")
-        st.title(f"{st.session_state.m_lud}")
-        if st.button("⚽ GOL LUD"): 
-            st.session_state.m_lud += 1
-            st.rerun()
-        st.write(f"**Faltas:** {st.session_state.f_lud}")
-        if st.button("+ Falta LUD"): 
-            st.session_state.f_lud += 1
-            st.rerun()
-    with c2:
-        st.write("---")
-        if st.button("🔄 RESET"): st.session_state.clear(); st.rerun()
-    with c3:
-        rival = st.text_input("Rival:", "Rival")
-        st.title(f"{st.session_state.m_riv}")
-        if st.button("⚽ GOL RIVAL"): 
-            st.session_state.m_riv += 1
-            st.rerun()
-        st.write(f"**Faltas:** {st.session_state.f_riv}")
-        if st.button("+ Falta RIVAL"): 
-            st.session_state.f_riv += 1
-            st.rerun()
-
-# --- CONTROL DEL RELOJ ---
 st.divider()
-if not st.session_state.activo:
-    if st.button("▶ REANUDAR RELOJ (TIEMPO DE JUEGO)", type="primary"):
-        st.session_state.activo = True
-        t = time.time()
-        for j in st.session_state.jugadores:
-            if j["pista"]: j["inicio"] = t
+
+# Botón Play/Pausa
+if not st.session_state.ac:
+    if st.button("▶ INICIAR RELOJ"):
+        st.session_state.ac = True
+        now = time.time()
+        for j in st.session_state.js:
+            if j["p"]: j["ini"] = now
         st.rerun()
 else:
-    if st.button("⏸ PAUSAR RELOJ (BALÓN PARADO)", type
+    if st.button("⏸ PAUSAR RELOJ"):
+        st.session_state.ac = False
+        now = time.time()
+        for j in st.session_state.js:
+            if j["p"] and j["ini"]:
+                if st.session_state.pt == "T1": j["t1"] += now - j["ini"]
+                else: j["t2"] += now - j["ini"]
+                j["ini"] = None
+        st.rerun()
+
+# Jugadores
+for i in range(0, 14, 2):
+    cols = st.columns(2)
+    for idx, col in enumerate(cols):
+        ji = i + idx
+        j = st.session_state.js[ji]
+        with col:
+            with st.container(border=True):
+                j["n"] = st.text_input("Nombre:", j["n"], key=f"n{ji}")
+                
+                # Tiempo Vivo
+                tt = j["t1"] if st.session_state.pt == "T1" else j["t2"]
+                if st.session_state.ac and j["p"] and j["ini"]:
+                    tt += time.time() - j["ini"]
+                
+                mm, ss = divmod(int(tt), 60)
+                st.subheader(f"⏱ {mm:02d}:{ss:02d}")
+                
+                c_g, c_e = st.columns(2)
+                if c_g.button(f"⚽ {j['g']}", key=f"g{ji}"):
+                    j["g"]+=1; st.session_state.ml+=1; st.rerun()
+                
+                txt = "🔴 SALIR" if j["p"] else "🟢 ENTRAR"
+                if c_e.button(txt, key=f"b{ji}"):
+                    now = time.time()
+                    if not j["p"]:
+                        j["p"], j["e"] = True, j["e"] + 1
+                        if st.session_state.ac: j["ini"] = now
+                    else:
+                        if st.session_state.ac and j["ini"]:
+                            if st.session_state.pt == "T1": j["t1"] += now - j["ini"]
+                            else: j["t2"] += now - j["ini"]
+                        j["p"], j["ini"] = False, None
+                    st.rerun()
+
+st.divider()
+if st.button("💾 EXCEL"):
+    df = pd.DataFrame([{"Nom": x["n"], "T1": round(x["t1"]/60,2), "T2": round(x["t2"]/60,2), "G": x["g"]} for x in st.session_state.js])
+    st.download_button("Descargar", df.to_csv(index=False).encode('utf-8'), "partido.csv", "text/csv")
