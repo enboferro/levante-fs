@@ -4,11 +4,14 @@ import time
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
+# 1. CONFIGURACIÓN
 st.set_page_config(page_title="LUD PRO", layout="wide")
 st_autorefresh(interval=1000, key="f5")
 ss = st.session_state
 
-st.markdown("""<style>
+# Estilos divididos para evitar cortes de línea largos
+style = """
+<style>
     .stApp{background:#F0F2F6}
     .h-box{background:linear-gradient(90deg,#003D7A,#7A0019);padding:10px;border-radius:10px;color:white;text-align:center}
     .rel-box{background:#1E1E1E;border:3px solid #FFD700;border-radius:20px;padding:10px}
@@ -17,8 +20,11 @@ st.markdown("""<style>
     .stButton>button{height:3rem;font-weight:bold}
     .j-card{background:white;padding:8px;border-radius:10px;border-left:8px solid #D3D3D3;margin-bottom:5px}
     .pist{text-align:center;padding:10px;background:white;border-radius:10px;border:2px solid #003D7A;margin-top:10px}
-</style>""", unsafe_allow_html=True)
+</style>
+"""
+st.markdown(style, unsafe_allow_html=True)
 
+# 2. INICIALIZACIÓN
 if 'js' not in ss:
     ss.js = [{"id":i,"n":f"J{i+1}","t1":0.0,"t2":0.0,"ini":None,"p":False,"g":0,"t":0,"per":0,"rec":0} for i in range(14)]
 if 'rt1' not in ss:
@@ -36,9 +42,10 @@ if ss.ac:
     else: ss.tpn += d
 ss.lpc = now
 
-# CABECERA
+# 3. CABECERA
 cl, ci, cr = st.columns([1, 4, 1])
 cl.image("https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/1200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png", width=60)
 with ci:
     r1, r2 = st.columns(2)
-    rvn = r1.text_input("RIV", "RIVAL", label
+    rvn = r1.text_input("RIV", "RIVAL", key="input_riv", label_visibility="collapsed").upper()
+    fp = r2.date_input("FEC", datetime.now(), key="input_
