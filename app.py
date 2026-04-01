@@ -1,9 +1,13 @@
 import streamlit as st
 import pandas as pd
 import time
+from streamlit_autorefresh import st_autorefresh
 
-# Configuración básica para iPad
-st.set_page_config(page_title="LUD FS", layout="wide")
+st.set_page_config(page_title="LUD ELITE", layout="wide")
+
+# CONFIGURACIÓN: Autorefresh cada 1 segundo para el tiempo real
+st_autorefresh(interval=1000, key="datarefresh")
+
 ss = st.session_state
 
 # 1. DATA (Inicialización)
@@ -13,8 +17,8 @@ if 'rt1' not in ss: ss.rt1, ss.rt2, ss.pt = 0.0, 0.0, "T1"
 if 'ml' not in ss: ss.ml, ss.mr, ss.fl, ss.fr = 0, 0, 0, 0
 if 'ac' not in ss: ss.ac, ss.ig = False, None
 
-# 2. MARCADOR Y FALTAS
-st.title("🐸 LUD FS - Control de Partido")
+# 2. MARCADOR
+st.title("🐸 LUD FS - Panel de Élite")
 c1, c2, c3 = st.columns(3)
 with c1:
     st.header(f"LUD: {ss.ml}")
@@ -23,16 +27,14 @@ with c1:
     if st.button("➕ FALTA LUD"): ss.fl+=1; st.rerun()
 with c2:
     ss.pt = st.radio("Parte:",["T1","T2"], horizontal=True)
-    if st.button("🔄 REINICIAR TODO"): ss.clear(); st.rerun()
+    if st.button("🔄 RESET"): ss.clear(); st.rerun()
 with c3:
     st.header(f"RIV: {ss.mr}")
     if st.button("⚽ +GOL RIV"): ss.mr+=1; st.rerun()
     st.write(f"Faltas: {ss.fr}")
     if st.button("➕ FALTA RIV"): ss.fr+=1; st.rerun()
 
-st.divider()
-
-# 3. RELOJ DE JUEGO (Grande)
+# 3. RELOJ DE JUEGO (TIEMPO REAL)
 tg = ss.rt1 if ss.pt=="T1" else ss.rt2
 if ss.ac and ss.ig: tg += time.time() - ss.ig
 m, s = divmod(int(tg), 60)
@@ -58,11 +60,11 @@ with cx:
                     j["ini"] = None
             ss.ig = None; st.rerun()
 with cy:
-    st.markdown(f"<h1 style='text-align:center; color:red;'>{m:02d}:{s:02d}</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h1 style='text-align:center; color:red; font-size:60px;'>{m:02d}:{s:02d}</h1>", unsafe_allow_html=True)
 
-# 4. JUGADORES (Tarjetas visibles)
+# 4. PISTA Y SEMÁFORO
 ep = sum(1 for j in ss.js if j["p"])
-st.write(f"**Pista: {ep}/5**")
+st.subheader(f"En Pista: {ep}/5")
 
 for i in range(0, 14, 2):
     cols = st.columns(2)
@@ -71,13 +73,33 @@ for i in range(0, 14, 2):
         if ji >= 14: break
         j = ss.js[ji]
         with col:
+            # Lógica de color de fatiga (Tiempo en el tramo actual)
+            t_tramo = 0
+            if j["p"] and j["ini"] and ss.ac:
+                t_tramo = time.time() - j["ini"]
+            
+            # Definir color según fatiga (segundos)
+            color_fatiga = "#000000" # Negro defecto
+            if t_tramo > 360: color_fatiga = "#FF0000" # Rojo (+6 min)
+            elif t_tramo > 240: color_fatiga = "#FF9900" # Naranja (+4 min)
+            elif j["p"]: color_fatiga = "#28a745" # Verde (En pista fresco)
+
             with st.container(border=True):
                 j["n"] = st.text_input("Nombre:", j["n"], key=f"n{ji}")
+                
+                # Tiempo total acumulado en vivo
                 tj = j["t1"] if ss.pt=="T1" else j["t2"]
                 if ss.ac and j["p"] and j["ini"]: tj += time.time() - j["ini"]
                 mm, ss_j = divmod(int(tj), 60)
                 
-                st.write(f"⏱ **{mm:02d}:{ss_j:02d}** | ⚽ Goles: **{j['g']}**")
+                # Visualización con Semáforo
+                st.markdown(f"""
+                <div style="padding:5px; border-radius:5px;">
+                    <span style="font-size:20px; font-weight:bold;">⏱ {mm:02d}:{ss_j:02d}</span>
+                    <span style="color:{color_fatiga}; font-size:24px; margin-left:20px;">●</span>
+                    <span style="font-size:14px; color:gray; float:right;">Goles: {j['g']}</span>
+                </div>
+                """, unsafe_allow_html=True)
                 
                 # Scouting
                 ca, cb, cc = st.columns(3)
@@ -101,6 +123,6 @@ for i in range(0, 14, 2):
                     else: st.toast("¡Ya hay 5!")
 
 st.divider()
-if st.button("💾 DESCARGAR ESTADÍSTICAS"):
+if st.button("💾 DESCARGAR EXCEL"):
     df = pd.DataFrame([{"J":x["n"],"Min":round((x["t1"]+x["t2"])/60,1),"G":x["g"],"T":x["t"],"P":x["per"],"R":x["rec"]} for x in ss.js])
     st.download_button("Bajar CSV", df.to_csv(index=False).encode('utf-8'), "stats.csv", "text/csv")
