@@ -4,59 +4,67 @@ import time
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-# 1. CONFIG
 st.set_page_config(page_title="LUD FS", layout="wide")
 st_autorefresh(interval=1000, key="f5")
-ss = st.session_state
+s = st.session_state
 
-# 2. INICIALIZACIÓN
-if 'js' not in ss:
-    n = ["Serra","Julian","Omar","Tony","Rochina","Benages","Pedrito","Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Jose","Coque","Nacho Gomez"]
-    ss.js = [{"n":x,"t_t":0.0,"ini":None,"p":False,"g":0,"t":0,"per":0,"rec":0} for x in n]
-if 'ml' not in ss:
-    ss.ml, ss.mr, ss.fl, ss.fr, ss.t_a, ss.i_c, ss.run = 0, 0, 0, 0, 0.0, None, False
+if 'js' not in s:
+    n = ["Serra","Julian","Omar","Tony","Rochina","Benages","Pedrito",
+         "Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Jose",
+         "Coque","Nacho Gomez"]
+    s.js = [{"n":x,"t":0.0,"i":None,"p":False,"g":0,"s":0,"e":0,"r":0} for x in n]
+    s.ml, s.mr, s.fl, s.fr, s.ta, s.ic, s.on = 0, 0, 0, 0, 0.0, None, False
 
 ah = time.time()
-td = ss.t_a + (ah - ss.i_c if ss.run and ss.i_c else 0)
+td = s.ta + (ah - s.ic if s.on and s.ic else 0)
 
-# 3. CABECERA
 c1, c2, c3 = st.columns([1,4,1])
-with c1: 
-    st.image("https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/1200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png", width=50)
-with c2: 
-    riv = st.text_input("R", "RIVAL", label_visibility="collapsed").upper()
+with c1: st.image("https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/1200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png", width=50)
+with c2: rv = st.text_input("R", "RIVAL", label_visibility="collapsed").upper()
 with c3: 
-    if st.button("🔄 RESET"):
-        ss.clear()
-        st.rerun()
+    if st.button("🔄"): s.clear(); st.rerun()
 
-# 4. MARCADOR
 m1, m2, m3 = st.columns([2,3,2])
 with m1:
-    st.metric("LUD", ss.ml, f"Faltas: {ss.fl}")
-    if st.button("⚽ GOL LUD", key="gl"): ss.ml+=1; st.rerun()
-    if st.button("⚠️ FALTA LUD", key="fl"): ss.fl+=1; st.rerun()
-
+    st.metric("LUD", s.ml, f"Faltas: {s.fl}")
+    if st.button("⚽ GOL", key="gl"): s.ml+=1; st.rerun()
+    if st.button("⚠️ FAL", key="fl"): s.fl+=1; st.rerun()
 with m2:
     mm, sv = divmod(int(td), 60)
-    st.markdown(f"<h1 style='text-align:center; font-size:4rem;'>{mm:02d}:{sv:02d}</h1>", unsafe_allow_html=True)
-    if not ss.run:
-        if st.button("▶ START", type="primary", use_container_width=True):
-            ss.i_c, ss.run = ah, True
-            for j in ss.js: 
-                if j["p"]: j["ini"] = ah
+    st.markdown(f"<h1 style='text-align:center;'>{mm:02d}:{sv:02d}</h1>", 1)
+    if not s.on:
+        if st.button("▶ START", type="primary", use_container_width=1):
+            s.ic, s.on = ah, True
+            for j in s.js: 
+                if j["p"]: j["i"] = ah
             st.rerun()
     else:
-        if st.button("⏸ STOP", type="secondary", use_container_width=True):
-            ss.t_a += ah - ss.i_c
-            ss.run, ss.i_c = False, None
-            for j in ss.js:
-                if j["p"] and j["ini"]: 
-                    j["t_t"] += ah - j["ini"]
-                    j["ini"] = None
+        if st.button("⏸ STOP", type="secondary", use_container_width=1):
+            s.ta += ah - s.ic
+            s.on, s.ic = False, None
+            for j in s.js:
+                if j["p"] and j["i"]: j["t"] += ah - j["i"]; j["i"] = None
             st.rerun()
-
 with m3:
-    st.metric(riv[:8], ss.mr, f"Faltas: {ss.fr}")
-    if st.button(f"⚽ GOL {riv[:3]}", key="gr"): ss.mr+=1; st.rerun()
-    if st.button(f"⚠️ FALTA {riv[:3]}", key="
+    st.metric(rv[:5], s.mr, f"Faltas: {s.fr}")
+    if st.button("⚽ GOL ", key="gr"): s.mr+=1; st.rerun()
+    if st.button("⚠️ FAL ", key="fr"): s.fr+=1; st.rerun()
+
+st.divider()
+ep = sum(1 for j in s.js if j["p"])
+st.write(f"Pista: {ep}/5")
+cols = st.columns(3)
+for idx, j in enumerate(s.js):
+    with cols[idx % 3]:
+        with st.container(border=True):
+            cn, cr = st.columns([1.5, 1])
+            j["n"] = cn.text_input(f"n{idx}", j["n"], key=f"in{idx}", label_visibility="collapsed")
+            tt = j["t"] + (ah - j["i"] if s.on and j["p"] and j["i"] else 0)
+            m_j, s_j = divmod(int(tt), 60)
+            cr.write(f"{'🟢' if j['p'] else '🔴'} {m_j:02d}:{s_j:02d}")
+            s1,s2,s3,s4,s5 = st.columns(5)
+            if s1.button("🎯", key=f"s1{idx}"): j["s"]+=1
+            if s2.button("🛡️", key=f"s2{idx}"): j["r"]+=1
+            if s3.button("❌", key=f"s3{idx}"): j["e"]+=1
+            if s4.button("⚽", key=f"s4{idx}"): j["g"]+=1; s.ml+=1; st.rerun()
+            if s5.button("
