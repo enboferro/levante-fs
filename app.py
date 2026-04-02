@@ -17,7 +17,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center;'>Levante UD - Cuenta Atrás v2.0</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>Levante UD - Control Partido v2.0</h1>", unsafe_allow_html=True)
 
 # 2. INICIALIZACIÓN DE SEGURIDAD
 if 'js' not in s:
