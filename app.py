@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import time
+import io
 from streamlit_autorefresh import st_autorefresh
-st.set_page_config(page_title="LUD v2.2", layout="wide")
+st.set_page_config(page_title="LUD v2.3", layout="wide")
 st_autorefresh(interval=1000, key="f5")
 s = st.session_state
 if 'js' not in s:
@@ -50,7 +51,6 @@ with m3:
 st.divider()
 ep = sum(1 for x in s.js if x["p"])
 st.subheader(f"🏃 EN PISTA: {ep} / 5")
-# 4 COLUMNAS PARA REDUCIR ESPACIO
 cols = st.columns(4)
 for idx, j in enumerate(s.js):
     with cols[idx % 4]:
@@ -72,13 +72,18 @@ for idx, j in enumerate(s.js):
                 st.rerun()
 st.divider()
 st.subheader("📊 TIEMPOS TOTALES")
-# MONITOR SIMPLIFICADO EN COLUMNAS PARA NO OCUPAR ESPACIO
 m_cols = st.columns(5)
 for idx, j in enumerate(s.js):
     cur = j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
     m,v = divmod(int(cur), 60)
     m_cols[idx % 5].write(f"**{j['n']}**: {m:02d}:{v:02d}")
 st.divider()
-if st.button("💾 DESCARGAR CSV"):
-    st.download_button("BAJAR", pd.DataFrame(s.js).to_csv(index=False).encode('utf-8'), "LUD.csv")
-st.write("v2.2 - Kike")
+if st.button("💾 EXPORTAR A EXCEL"):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df = pd.DataFrame(s.js)
+        # Limpiamos nombres de columnas para el Excel final
+        df.columns = ["Nombre", "Seg_Totales", "Ini_Timestamp", "En_Pista", "Goles", "Tiros", "Perdidas", "Robos"]
+        df.to_excel(writer, index=False, sheet_name='Estadisticas')
+    st.download_button("Descargar Archivo Excel", output.getvalue(), f"LUD_vs_{rv}.xlsx")
+st.write("v2.3 - Kike")
