@@ -21,7 +21,7 @@ if c2.button("🔄"): s.clear(); st.rerun()
 m1, m2, m3 = st.columns([2,3,2])
 with m1:
     st.metric("LUD", s.ml, f"F: {s.fl}")
-    if st.button("⚽ LUD", use_container_width=1): s.ml+=1; st.rerun()
+    if st.button("⚽ GOL LUD", use_container_width=1): s.ml+=1; st.rerun()
     f1, f2 = st.columns(2)
     if f1.button("F+", key="flp"): s.fl+=1; st.rerun()
     if f2.button("F-", key="flm"): s.fl=max(0, s.fl-1); st.rerun()
@@ -48,14 +48,8 @@ with m3:
     if r1.button("F+", key="frp"): s.fr+=1; st.rerun()
     if r2.button("F-", key="frm"): s.fr=max(0, s.fr-1); st.rerun()
 st.divider()
-st.subheader("📊 MONITOR")
-res = []
-for j in s.js:
-    cur = j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-    m,v = divmod(int(cur), 60)
-    res.append({"Jugador":j["n"],"E":"PISTA" if j["p"] else "BANCO","T":f"{m:02d}:{v:02d}","G":j["g"]})
-st.table(pd.DataFrame(res))
-st.divider()
+ep = sum(1 for x in s.js if x["p"])
+st.subheader(f"🏃 EN PISTA: {ep} / 5")
 cols = st.columns(3)
 for idx, j in enumerate(s.js):
     with cols[idx % 3]:
@@ -69,12 +63,21 @@ for idx, j in enumerate(s.js):
             if s3.button("❌", key=f"e{idx}"): j["e"]+=1
             if s4.button("⚽", key=f"g{idx}"): j["g"]+=1; s.ml+=1; st.rerun()
             if st.button("CAMBIO", key=f"c{idx}", use_container_width=1):
-                if not j["p"] and sum(1 for x in s.js if x["p"]) < 5:
+                if not j["p"] and ep < 5:
                     j["p"], j["i"] = True, (ah if s.on else None)
                 elif j["p"]:
                     if s.on and j["i"]: j["t"] += ah - j["i"]
                     j["p"], j["i"] = False, None
                 st.rerun()
 st.divider()
+st.subheader("📊 MONITOR RESUMEN")
+res = []
+for j in s.js:
+    cur = j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
+    m,v = divmod(int(cur), 60)
+    res.append({"Jugador":j["n"],"E":"PISTA" if j["p"] else "BANCO","T":f"{m:02d}:{v:02d}","G":j["g"]})
+st.table(pd.DataFrame(res))
+st.divider()
 if st.button("💾 DESCARGAR"):
-    st.download_button("BAJAR", pd.DataFrame(s.js).to_csv(index=False).encode('utf-8'), "LUD.csv")
+    st.download_button("BAJAR CSV", pd.DataFrame(s.js).to_csv(index=False).encode('utf-8'), "LUD.csv")
+st.write("v2.1 - Kike")
