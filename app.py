@@ -4,17 +4,17 @@ import time
 import io
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD v3.2 - Gestión de Partes", layout="wide")
+st.set_page_config(page_title="LUD v3.3 - Quintetos Fijos", layout="wide")
 s = st.session_state
 
 # 1. INICIALIZACIÓN
 if 'js' not in s:
     n = ["Serra","Julian","Omar","Tony","Rochina","Benages","Pedrito","Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Jose","Coque","Nacho Gomez"]
-    # t = tiempo en la parte actual, t_1t = tiempo guardado de la primera parte
     s.js = [{"n":x,"t":0.0,"t_1t":0.0,"i":None,"p":False,"g":0,"s":0,"e":0,"r":0} for x in n]
     s.ml, s.mr, s.fl, s.fr = 0, 0, 0, 0
     s.ta, s.ic, s.on = 0.0, None, False
     s.parte = "1T"
+    s.q1, s.q2 = None, None # Para guardar los quintetos fijos
     s.exp = False
 
 if not s.exp:
@@ -32,11 +32,25 @@ with c1:
     rv = col_t.text_input("RIVAL", "RIVAL", label_visibility="collapsed").upper()
 
 with c2:
-    if s.ta == 0 and not s.on and s.parte == "1T":
-        iniciales = st.multiselect("Quinteto Inicial", [j["n"] for j in s.js], max_selections=5)
-        if st.button("Confirmar"):
-            for j in s.js: j["p"] = True if j["n"] in iniciales else False
-            st.rerun()
+    # LÓGICA DE QUINTETO INICIAL FIJO
+    q_actual = s.q1 if s.parte == "1T" else s.q2
+    
+    if q_actual is None:
+        st.markdown(f"**Selecciona Quinteto {s.parte}:**")
+        sel = st.multiselect("Quinteto", [j["n"] for j in s.js], max_selections=5, label_visibility="collapsed")
+        if st.button("🔒 CONFIRMAR Y BLOQUEAR"):
+            if len(sel) == 5:
+                if s.parte == "1T": s.q1 = sel
+                else: s.q2 = sel
+                # Poner en pista a los elegidos
+                for j in s.js:
+                    j["p"] = True if j["n"] in sel else False
+                    j["i"] = None # Reset por si acaso
+                st.rerun()
+            else:
+                st.warning("Deben ser 5 jugadores")
+    else:
+        st.success(f"✅ Quinteto {s.parte} bloqueado: {', '.join(q_actual)}")
 
 if c3.button("🔄 RESET"):
     s.clear(); st.rerun()
@@ -87,10 +101,9 @@ with t1:
     for idx, j in enumerate(s.js):
         with cols[idx % 4]:
             with st.container(border=True):
-                # TIEMPO SOLO DE LA PARTE ACTUAL
-                t_parte = j["t"] + (ah - j["i"] if s.on and j["p"] and j["i"] else 0)
-                m_j,v_j = divmod(int(t_parte), 60)
-                st.write(f"{'🟢' if j['p'] else '🔴'} **{j['n']}** | {m_j:02d}:{v_j:02d}")
+                t_p = j["t"] + (ah - j["i"] if s.on and j["p"] and j["i"] else 0)
+                m,v = divmod(int(t_p), 60)
+                st.write(f"{'🟢' if j['p'] else '🔴'} **{j['n']}** | {m:02d}:{v:02d}")
                 s1,s2,s3,s4 = st.columns(4)
                 if s1.button("🎯", key=f"t{idx}"): j["s"]+=1
                 if s2.button("🛡️", key=f"r{idx}"): j["r"]+=1
@@ -104,49 +117,4 @@ with t1:
                         j["p"], j["i"] = False, None
                     st.rerun()
 
-with t2:
-    st.subheader("📊 TIEMPO TOTAL ACUMULADO (1T + 2T)")
-    m_cols = st.columns(5)
-    for idx, j in enumerate(s.js):
-        # Sumamos tiempo 1T + tiempo actual del 2T
-        t_total = j["t_1t"] + j["t"] + (ah - j["i"] if s.on and j["p"] and j["i"] else 0)
-        m_j,v_j = divmod(int(t_total), 60)
-        m_cols[idx % 5].write(f"**{j['n']}**: {m_j:02d}:{v_j:02d}")
-
-with t3:
-    if s.parte == "1T":
-        if st.button("🏁 FINALIZAR 1T Y REINICIAR FALTAS", type="primary", use_container_width=True):
-            if s.on: # Si estaba en marcha, guardamos tiempo actual
-                s.ta += ah - s.ic
-                for j in s.js:
-                    if j["p"] and j["i"]: j["t"] += ah - j["i"]
-            
-            # Transferimos tiempo del 1T a la memoria histórica y reseteamos el contador de "parte"
-            for j in s.js:
-                j["t_1t"] = j["t"]
-                j["t"] = 0.0
-                j["i"] = None
-            
-            # Reset Reloj y Faltas (Marcador NO se toca)
-            s.fl, s.fr = 0, 0
-            s.ta, s.ic, s.on = 0.0, None, False
-            s.parte = "2T"
-            st.rerun()
-    else:
-        st.success("SEGUNDA PARTE EN CURSO")
-
-    st.divider()
-    if st.button("💾 GENERAR EXCEL"):
-        s.exp = True
-        datos = []
-        for j in s.js:
-            t_final = j["t_1t"] + j["t"] + (ah - j["i"] if s.on and j["p"] and j["i"] else 0)
-            m_e, v_e = divmod(int(t_final), 60)
-            datos.append({"Jugador": j["n"], "Tiempo Total": f"{m_e:02d}:{v_e:02d}", "Goles": j["g"], "Tiros": j["s"], "Robos": j["r"], "Pérdidas": j["e"]})
-        
-        df = pd.DataFrame(datos)
-        out = io.BytesIO()
-        with pd.ExcelWriter(out, engine='openpyxl') as w:
-            df.to_excel(w, index=False)
-        st.download_button("📥 DESCARGAR EXCEL", out.getvalue(), f"Informe_{rv}.xlsx")
-        if st.button("Reanudar"): s.exp = False; st.rerun()
+with t
