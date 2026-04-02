@@ -3,7 +3,7 @@ import pandas as pd
 import time
 import io
 from streamlit_autorefresh import st_autorefresh
-st.set_page_config(page_title="LUD v3.4", layout="wide")
+st.set_page_config(page_title="LUD v3.5 iPad Fix", layout="wide")
 s = st.session_state
 if 'js' not in s:
     n = ["Serra","Julian","Omar","Tony","Rochina","Benages","Pedrito","Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Jose","Coque","Nacho Gomez"]
@@ -15,7 +15,7 @@ tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr)
 c1,c2,c3 = st.columns([3,2,1])
 with c1:
-    ci,ct = st.columns([0.5,3.5])
+    ci,ct = st.columns([0.6,3.4])
     ci.image("https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png", width=50)
     rv = ct.text_input("R", "RIVAL", label_visibility="collapsed").upper()
 with c2:
@@ -35,21 +35,21 @@ with t1:
     m1,m2,m3 = st.columns([2,3,2])
     with m1:
         st.metric("LUD",s.ml,f"F:{s.fl}")
-        if st.button("⚽LUD",use_container_width=1): s.ml+=1; st.rerun()
+        if st.button("⚽ GOL LUD",use_container_width=1): s.ml+=1; st.rerun()
         f1,f2 = st.columns(2)
         if f1.button("F+",key="flp"): s.fl+=1; st.rerun()
         if f2.button("F-",key="flm"): s.fl=max(0,s.fl-1); st.rerun()
     with m2:
         m,v = divmod(int(rem),60)
-        st.markdown(f"<h1 style='text-align:center;font-size:4rem;color:red;'>{m:02d}:{v:02d}</h1>",1)
+        st.markdown(f"<h1 style='text-align:center;font-size:4rem;color:red;margin:0;'>{m:02d}:{v:02d}</h1>",1)
         if not s.on:
-            if st.button("▶START",use_container_width=1,type="primary"):
+            if st.button("▶ START",use_container_width=1,type="primary"):
                 s.ic,s.on = ah,True
                 for j in s.js: 
                     if j["p"]: j["i"]=ah
                 st.rerun()
         else:
-            if st.button("⏸STOP",use_container_width=1):
+            if st.button("⏸ STOP",use_container_width=1):
                 s.ta += ah-s.ic
                 s.on,s.ic = False,None
                 for j in s.js:
@@ -57,7 +57,7 @@ with t1:
                 st.rerun()
     with m3:
         st.metric(rv[:5],s.mr,f"F:{s.fr}")
-        if st.button(f"⚽{rv[:3]}",use_container_width=1): s.mr+=1; st.rerun()
+        if st.button(f"⚽ GOL {rv[:3]}",use_container_width=1): s.mr+=1; st.rerun()
         r1,r2 = st.columns(2)
         if r1.button("F+",key="frp"): s.fr+=1; st.rerun()
         if r2.button("F-",key="frm"): s.fr=max(0,s.fr-1); st.rerun()
@@ -69,11 +69,14 @@ with t1:
                 tp = j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
                 m,v = divmod(int(tp),60)
                 st.write(f"{'🟢' if j['p'] else '🔴'} **{j['n']}** | {m:02d}:{v:02d}")
-                b1,b2,b3,b4 = st.columns(4)
-                if b1.button("🎯",key=f"t{idx}"): j["s"]+=1
-                if b2.button("🛡️",key=f"r{idx}"): j["r"]+=1
-                if b3.button("❌",key=f"e{idx}"): j["e"]+=1
-                if b4.button("⚽",key=f"g{idx}"): j["g"]+=1; s.ml+=1; st.rerun()
+                # BOTONERA REESTRUCTURADA PARA IPAD (2X2)
+                row1_1, row1_2 = st.columns(2)
+                if row1_1.button("🎯",key=f"t{idx}",use_container_width=1): j["s"]+=1
+                if row1_2.button("🛡️",key=f"r{idx}",use_container_width=1): j["r"]+=1
+                row2_1, row2_2 = st.columns(2)
+                if row2_1.button("❌",key=f"e{idx}",use_container_width=1): j["e"]+=1
+                if row2_2.button("⚽",key=f"g{idx}",use_container_width=1): j["g"]+=1; s.ml+=1; st.rerun()
+                st.write("")
                 if st.button("CAMBIO",key=f"c{idx}",use_container_width=1):
                     if not j["p"] and sum(1 for x in s.js if x["p"])<5:
                         j["p"],j["i"] = True,(ah if s.on else None)
@@ -99,14 +102,10 @@ with t3:
             st.rerun()
     else: st.success("2T EN CURSO")
     st.divider()
-    if st.button("💾 EXCEL"):
+    if st.button("💾 EXCEL FINAL"):
         s.ex = True
         dt = []
         for j in s.js:
             tf = j["t1"]+j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             m,v = divmod(int(tf),60)
-            dt.append({"Jugador":j["n"],"Tiempo":f"{m:02d}:{v:02d}","Goles":j["g"],"Tiros":j["s"],"Robos":j["r"],"Pérdidas":j["e"]})
-        out = io.BytesIO()
-        with pd.ExcelWriter(out, engine='openpyxl') as w: pd.DataFrame(dt).to_excel(w, index=False)
-        st.download_button("📥 DESCARGAR", out.getvalue(), f"LUD_{rv}.xlsx")
-        if st.button("VOLVER"): s.ex=False; st.rerun()
+            dt.append({"Jugador":j["n"],"
