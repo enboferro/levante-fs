@@ -3,7 +3,7 @@ import pandas as pd
 import time
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD FS - Fatiga", layout="wide")
+st.set_page_config(page_title="LUD FS - Fatiga V1.2", layout="wide")
 st_autorefresh(interval=1000, key="f5")
 s = st.session_state
 
@@ -54,26 +54,30 @@ for idx, j in enumerate(s.js):
         with st.container(border=True):
             tt = j["t"] + (ah - j["i"] if s.on and j["p"] and j["i"] else 0)
             mj, sj = divmod(int(tt), 60)
-            mins_float = tt / 60.0
+            mins = tt / 60.0
             
-            # Lógica de Color de Fatiga
-            if mins_float <= 3: color = "green"
-            elif mins_float <= 5: color = "orange"
-            else: color = "red"
+            # Lógica de Color y Texto de Fatiga
+            if mins <= 3: 
+                col, txt = "#2ecc71", "BAJA" # Verde
+            elif mins <= 5: 
+                col, txt = "#f39c12", "MEDIA" # Naranja
+            else: 
+                col, txt = "#e74c3c", "ALTA" # Rojo
             
             c_n, c_t = st.columns([1.5, 1])
             c_n.write(f"{'🟢' if j['p'] else '🔴'} **{j['n']}**")
             c_t.write(f"⏱️ **{mj:02d}:{sj:02d}**")
             
-            # Barra de fatiga visual (máximo 10 min para escala)
-            progreso = min(mins_float / 10.0, 1.0)
+            # BARRA DE FATIGA MEJORADA
+            ancho = min((mins / 7.0) * 100, 100) # El 100% de la barra son 7 mins
             st.markdown(f"""
-                <div style="width:100%; background-color:#e0e0e0; border-radius:5px; height:10px;">
-                    <div style="width:{progreso*100}%; background-color:{color}; height:10px; border-radius:5px;"></div>
+                <div style="border: 1px solid #ddd; border-radius: 5px; background: #eee; height: 15px; width: 100%;">
+                    <div style="background-color: {col}; width: {ancho}%; height: 100%; border-radius: 4px; transition: width 0.5s;">
+                    </div>
                 </div>
+                <p style="margin:0; font-size: 10px; color: {col}; font-weight: bold; text-align: right;">FATIGA: {txt}</p>
                 """, unsafe_allow_html=True)
             
-            st.write("") # Espaciador
             s1, s2, s3, s4 = st.columns(4)
             if s1.button("🎯", key=f"t{idx}"): j["s"]+=1
             if s2.button("🛡️", key=f"r{idx}"): j["r"]+=1
@@ -92,4 +96,4 @@ for idx, j in enumerate(s.js):
 st.divider()
 if st.button("💾 DESCARGAR RESULTADOS"):
     st.download_button("BAJAR CSV", pd.DataFrame(s.js).to_csv(index=False).encode('utf-8'), "partido.csv")
-st.markdown("<p style='text-align:center;color:gray;'>Desarrollado por Kike versión 1.1 - Fatiga Mode</p>", 1)
+st.markdown("<p style='text-align:center;color:gray;'>Desarrollado por Kike v1.2</p>", 1)
