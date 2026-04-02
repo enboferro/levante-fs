@@ -4,9 +4,10 @@ import time
 import io
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD v2.6", layout="wide")
+st.set_page_config(page_title="LUD v2.7", layout="wide")
 s = st.session_state
 
+# 1. CONTROL DE REFRESCO
 if "exp" not in s: s.exp = False
 if not s.exp:
     st_autorefresh(interval=1000, key="f5")
@@ -50,7 +51,6 @@ with m2:
             for j in s.js:
                 if j["p"] and j["i"]: j["t"]+=ah-j["i"]; j["i"]=None
             st.rerun()
-
 with m3:
     st.metric(rv[:5], s.mr, f"F: {s.fr}")
     if st.button(f"⚽ {rv[:3]}", use_container_width=1): s.mr+=1; st.rerun()
@@ -82,10 +82,16 @@ for idx, j in enumerate(s.js):
                 st.rerun()
 
 st.divider()
-# BOTÓN DE EXCEL CON CONVERSIÓN A MINUTOS
+st.subheader("📊 MONITOR TIEMPOS REALES")
+m_cols = st.columns(5)
+for idx, j in enumerate(s.js):
+    cur = j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
+    m,v = divmod(int(cur), 60)
+    m_cols[idx % 5].write(f"**{j['n']}**: {m:02d}:{v:02d}")
+
+st.divider()
 if st.button("💾 GENERAR EXCEL"):
     s.exp = True
-    # Creamos una copia de los datos para no estropear el contador de la app
     datos_excel = []
     for j in s.js:
         total_s = j["t"] + (ah - j["i"] if s.on and j["p"] and j["i"] else 0)
@@ -93,27 +99,16 @@ if st.button("💾 GENERAR EXCEL"):
         datos_excel.append({
             "Jugador": j["n"],
             "Tiempo Jugado": f"{m_e:02d}:{v_e:02d}",
-            "Goles": j["g"],
-            "Tiros": j["s"],
-            "Robos": j["r"],
-            "Pérdidas": j["e"]
+            "Goles": j["g"], "Tiros": j["s"], "Robos": j["r"], "Pérdidas": j["e"]
         })
-    
     df = pd.DataFrame(datos_excel)
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Estadisticas')
-    
-    st.success("Excel listo con tiempos en formato MM:SS")
-    st.download_button(
-        label="📥 DESCARGAR .XLSX",
-        data=output.getvalue(),
-        file_name=f"Informe_{rv}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-    
+        df.to_excel(writer, index=False, sheet_name='Stats')
+    st.success("Excel listo")
+    st.download_button(label="📥 DESCARGAR .XLSX", data=output.getvalue(), file_name=f"Informe_{rv}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     if st.button("🔄 VOLVER"):
         s.exp = False
         st.rerun()
 
-st.write("v2.6 - Kike")
+st.write("v2.7 - Kike")
