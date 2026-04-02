@@ -4,10 +4,9 @@ import time
 import io
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD v2.5", layout="wide")
+st.set_page_config(page_title="LUD v2.6", layout="wide")
 s = st.session_state
 
-# 1. CONTROL DE REFRESCO
 if "exp" not in s: s.exp = False
 if not s.exp:
     st_autorefresh(interval=1000, key="f5")
@@ -48,6 +47,8 @@ with m2:
         if st.button("⏸ STOP", use_container_width=1):
             s.ta += ah - s.ic
             s.on, s.ic = False, None
+            for j in s.js:
+                if j["p"] and j["i"]: j["t"]+=ah-j["i"]; j["i"]=None
             st.rerun()
 
 with m3:
@@ -81,28 +82,38 @@ for idx, j in enumerate(s.js):
                 st.rerun()
 
 st.divider()
-# BOTÓN DE EXCEL CORREGIDO
+# BOTÓN DE EXCEL CON CONVERSIÓN A MINUTOS
 if st.button("💾 GENERAR EXCEL"):
     s.exp = True
-    df = pd.DataFrame(s.js)
-    # Limpieza de datos para el excel
-    df.columns = ["Nombre", "Segundos", "Marca", "EnPista", "Goles", "Tiros", "Fallos", "Robos"]
+    # Creamos una copia de los datos para no estropear el contador de la app
+    datos_excel = []
+    for j in s.js:
+        total_s = j["t"] + (ah - j["i"] if s.on and j["p"] and j["i"] else 0)
+        m_e, v_e = divmod(int(total_s), 60)
+        datos_excel.append({
+            "Jugador": j["n"],
+            "Tiempo Jugado": f"{m_e:02d}:{v_e:02d}",
+            "Goles": j["g"],
+            "Tiros": j["s"],
+            "Robos": j["r"],
+            "Pérdidas": j["e"]
+        })
     
+    df = pd.DataFrame(datos_excel)
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Stats')
+        df.to_excel(writer, index=False, sheet_name='Estadisticas')
     
-    excel_data = output.getvalue()
+    st.success("Excel listo con tiempos en formato MM:SS")
     st.download_button(
-        label="📥 DESCARGAR AHORA (.XLSX)",
-        data=excel_data,
-        file_name=f"Estadisticas_{rv}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        key="download_excel_final"
+        label="📥 DESCARGAR .XLSX",
+        data=output.getvalue(),
+        file_name=f"Informe_{rv}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     
     if st.button("🔄 VOLVER"):
         s.exp = False
         st.rerun()
 
-st.write("v2.5 - Kike")
+st.write("v2.6 - Kike")
