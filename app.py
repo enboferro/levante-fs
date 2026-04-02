@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import time
 from streamlit_autorefresh import st_autorefresh
-st.set_page_config(page_title="LUD v2.1", layout="wide")
+st.set_page_config(page_title="LUD v2.2", layout="wide")
 st_autorefresh(interval=1000, key="f5")
 s = st.session_state
 if 'js' not in s:
@@ -20,7 +20,7 @@ with c1:
 if c2.button("🔄"): s.clear(); st.rerun()
 m1, m2, m3 = st.columns([2,3,2])
 with m1:
-    st.metric("LUD", s.ml, f"F: {s.fl}")
+    st.metric("LUD", s.ml, f"Faltas: {s.fl}")
     if st.button("⚽ GOL LUD", use_container_width=1): s.ml+=1; st.rerun()
     f1, f2 = st.columns(2)
     if f1.button("F+", key="flp"): s.fl+=1; st.rerun()
@@ -42,7 +42,7 @@ with m2:
                 if j["p"] and j["i"]: j["t"]+=ah-j["i"]; j["i"]=None
             st.rerun()
 with m3:
-    st.metric(rv[:5], s.mr, f"F: {s.fr}")
+    st.metric(rv[:5], s.mr, f"Faltas: {s.fr}")
     if st.button(f"⚽ {rv[:3]}", use_container_width=1): s.mr+=1; st.rerun()
     r1, r2 = st.columns(2)
     if r1.button("F+", key="frp"): s.fr+=1; st.rerun()
@@ -50,9 +50,10 @@ with m3:
 st.divider()
 ep = sum(1 for x in s.js if x["p"])
 st.subheader(f"🏃 EN PISTA: {ep} / 5")
-cols = st.columns(3)
+# 4 COLUMNAS PARA REDUCIR ESPACIO
+cols = st.columns(4)
 for idx, j in enumerate(s.js):
-    with cols[idx % 3]:
+    with cols[idx % 4]:
         with st.container(border=True):
             cur = j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             m,v = divmod(int(cur), 60)
@@ -70,14 +71,14 @@ for idx, j in enumerate(s.js):
                     j["p"], j["i"] = False, None
                 st.rerun()
 st.divider()
-st.subheader("📊 MONITOR RESUMEN")
-res = []
-for j in s.js:
+st.subheader("📊 TIEMPOS TOTALES")
+# MONITOR SIMPLIFICADO EN COLUMNAS PARA NO OCUPAR ESPACIO
+m_cols = st.columns(5)
+for idx, j in enumerate(s.js):
     cur = j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
     m,v = divmod(int(cur), 60)
-    res.append({"Jugador":j["n"],"E":"PISTA" if j["p"] else "BANCO","T":f"{m:02d}:{v:02d}","G":j["g"]})
-st.table(pd.DataFrame(res))
+    m_cols[idx % 5].write(f"**{j['n']}**: {m:02d}:{v:02d}")
 st.divider()
-if st.button("💾 DESCARGAR"):
-    st.download_button("BAJAR CSV", pd.DataFrame(s.js).to_csv(index=False).encode('utf-8'), "LUD.csv")
-st.write("v2.1 - Kike")
+if st.button("💾 DESCARGAR CSV"):
+    st.download_button("BAJAR", pd.DataFrame(s.js).to_csv(index=False).encode('utf-8'), "LUD.csv")
+st.write("v2.2 - Kike")
