@@ -69,14 +69,12 @@ with t1:
                 tp = j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
                 m,v = divmod(int(tp),60)
                 st.write(f"{'🟢' if j['p'] else '🔴'} **{j['n']}** | {m:02d}:{v:02d}")
-                # BOTONERA REESTRUCTURADA PARA IPAD (2X2)
-                row1_1, row1_2 = st.columns(2)
-                if row1_1.button("🎯",key=f"t{idx}",use_container_width=1): j["s"]+=1
-                if row1_2.button("🛡️",key=f"r{idx}",use_container_width=1): j["r"]+=1
-                row2_1, row2_2 = st.columns(2)
-                if row2_1.button("❌",key=f"e{idx}",use_container_width=1): j["e"]+=1
-                if row2_2.button("⚽",key=f"g{idx}",use_container_width=1): j["g"]+=1; s.ml+=1; st.rerun()
-                st.write("")
+                r1_1, r1_2 = st.columns(2)
+                if r1_1.button("🎯",key=f"t{idx}",use_container_width=1): j["s"]+=1
+                if r1_2.button("🛡️",key=f"r{idx}",use_container_width=1): j["r"]+=1
+                r2_1, r2_2 = st.columns(2)
+                if r2_1.button("❌",key=f"e{idx}",use_container_width=1): j["e"]+=1
+                if r2_2.button("⚽",key=f"g{idx}",use_container_width=1): j["g"]+=1; s.ml+=1; st.rerun()
                 if st.button("CAMBIO",key=f"c{idx}",use_container_width=1):
                     if not j["p"] and sum(1 for x in s.js if x["p"])<5:
                         j["p"],j["i"] = True,(ah if s.on else None)
@@ -101,11 +99,4 @@ with t3:
             s.fl,s.fr,s.ta,s.ic,s.on,s.pa = 0,0,0.0,None,False,"2T"
             st.rerun()
     else: st.success("2T EN CURSO")
-    st.divider()
-    if st.button("💾 EXCEL FINAL"):
-        s.ex = True
-        dt = []
-        for j in s.js:
-            tf = j["t1"]+j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-            m,v = divmod(int(tf),60)
-            dt.append({"Jugador":j["n"],"
+    st.divider
