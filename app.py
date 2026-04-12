@@ -4,7 +4,7 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v6.0", layout="wide")
+st.set_page_config(page_title="LUD Match Control v6.1", layout="wide")
 
 st.markdown("""
     <style>
@@ -17,8 +17,17 @@ st.markdown("""
     .title {color:#003D7A; font-size:1.4rem; font-weight:bold; margin:0;}
     .label-x {font-size:0.65rem; font-weight:700; text-align:center; color:#444; margin-top:1px; text-transform: uppercase;}
     .perc-bold {font-weight: 800; color: #000; font-size: 0.75rem;}
-    /* Estilo para las métricas pequeñas en la ficha */
-    .mini-stats { font-size: 0.7rem; color: #666; line-height: 1; margin-top: 2px; }
+    
+    /* Estilo para las métricas en negrita y más legibles */
+    .mini-stats { 
+        font-size: 0.8rem; 
+        font-weight: 700; 
+        color: #333; 
+        line-height: 1.2; 
+        margin-top: 3px; 
+    }
+    .rot-bold { font-weight: 800; color: #555; font-size: 0.8rem; }
+    
     hr { margin: 0.4rem 0px !important; }
     button[key*="dok_btn"] { background-color: #e8f5e9 !important; border: 1px solid #28a745 !important; }
     button[key*="dko_btn"] { background-color: #ffebee !important; border: 1px solid #dc3545 !important; }
@@ -35,7 +44,7 @@ if 'js' not in st.session_state:
     st.session_state.hist = {}
 
 s = st.session_state
-if not s.ex: st_autorefresh(1000, key="f5_v60")
+if not s.ex: st_autorefresh(1000, key="f5_v61")
 
 ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -104,30 +113,27 @@ with c3:
 
 st.divider()
 
-# JUGADORES (Ficha optimizada con micro-estadísticas)
+# JUGADORES
 cols = st.columns(5)
 for idx, j in enumerate(s.js):
     with cols[idx%5]:
         with st.container(border=True):
-            # Calcular tiempo turno
             tc = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             mj, vj = divmod(int(tc), 60)
-            
-            # Calcular tiempo total acumulado
             tl = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             mt, vt = divmod(int(tl), 60)
             
-            # Fila de Nombre y Rotación
-            st.markdown(f"<p style='margin:0;font-size:0.75rem;'>{'🟢' if j['p'] else '🔴'} <b>{j['n']}</b> <span style='float:right; color:#888;'>R:{j['r']}</span></p>", unsafe_allow_html=True)
+            # Nombre y Rotación (Negrita reforzada)
+            st.markdown(f"<p style='margin:0;font-size:0.75rem;'>{'🟢' if j['p'] else '🔴'} <b>{j['n']}</b> <span class='rot-bold' style='float:right;'>R:{j['r']}</span></p>", unsafe_allow_html=True)
             
-            # Tiempo del Turno Actual (Grande)
+            # Turno actual
             st.markdown(f"<h4 style='margin:0;text-align:center;'>{mj:02d}:{vj:02d}</h4>", unsafe_allow_html=True)
             
-            # Micro-totales (Goles y Tiempo acumulado)
+            # Totales (Negrita y más grandes)
             st.markdown(f"""
                 <div style='display:flex; justify-content:space-between;' class='mini-stats'>
-                    <span>⚽ {j['g']}</span>
-                    <span>Σ {mt:02d}:{vt:02d}</span>
+                    <span>⚽ <b>{j['g']}</b></span>
+                    <span>Σ <b>{mt:02d}:{vt:02d}</b></span>
                 </div>
                 """, unsafe_allow_html=True)
             
@@ -139,10 +145,3 @@ for idx, j in enumerate(s.js):
                     if s.on and j["i"]: d_d = ah-j["i"]; j["tot"]+=d_d; j["tt"]+=d_d
                     j["p"], j["i"] = False, None
                 st.rerun()
-
-# PESTAÑA DE RESUMEN
-tab1, tab2 = st.tabs(["📊 TOTALES", "💾 EXCEL"])
-with tab1:
-    col_t1, col_t2 = st.columns(2)
-    with col_t1:
-        st.write("**Resumen Actual:**")
