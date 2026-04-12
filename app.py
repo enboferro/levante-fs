@@ -4,45 +4,44 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v5.6", layout="wide")
+st.set_page_config(page_title="LUD Match Control v5.7", layout="wide")
 
-# CSS DE SENSIBILIDAD Y ESTÉTICA
+# CSS PARA COMPRESIÓN DE ESPACIO AL MÁXIMO
 st.markdown("""
     <style>
-    .block-container {padding-top:0.5rem; padding-left:1rem; padding-right:1rem;}
-    [data-testid="stVerticalBlock"] > div { gap: 0.1rem; }
+    .block-container {padding-top:0rem; padding-bottom:0rem; padding-left:1rem; padding-right:1rem;}
+    [data-testid="stVerticalBlock"] > div { gap: 0rem !important; }
+    [data-testid="stMetric"] { padding: 0px !important; }
+    
+    /* Eliminar espacios entre filas de columnas */
+    div[data-testid="column"] { padding: 0px !important; }
     
     div.stButton > button {
         border-radius: 6px;
-        height: 2.3em;
+        height: 2.1em;
         width: 100%;
-        font-size: 0.95rem !important;
+        font-size: 0.9rem !important;
         font-weight: bold !important;
-        padding: 0px !important;
         transition: none !important;
-        border: 1px solid #ccc;
     }
     
-    div.stButton > button:active {
-        transform: scale(0.92);
-        background-color: #003D7A !important;
-        color: white !important;
-        border: 2px solid white !important;
-    }
+    div.stButton > button:active { transform: scale(0.92); background-color: #003D7A !important; }
 
     .header-container {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 20px;
+        gap: 15px;
         border-bottom: 2px solid #ed1c24;
-        margin-bottom: 10px;
-        padding-bottom: 5px;
+        margin-bottom: 5px;
+        padding-top: 5px;
     }
 
-    .title {color:#003D7A; font-size:1.8rem; font-weight:bold; margin:0;}
-    .label-x {font-size:0.75rem; font-weight:bold; text-align:center; color:#444; margin-top:4px;}
+    .title {color:#003D7A; font-size:1.5rem; font-weight:bold; margin:0;}
+    .label-x {font-size:0.7rem; font-weight:bold; text-align:center; color:#444; margin-top:2px;}
     
+    hr { margin: 0.5rem 0px !important; } /* Divisor más fino */
+
     button[key*="dok_btn"] { background-color: #e8f5e9 !important; border: 1px solid #28a745 !important; }
     button[key*="dko_btn"] { background-color: #ffebee !important; border: 1px solid #dc3545 !important; }
     </style>
@@ -57,31 +56,31 @@ if 'js' not in st.session_state:
     st.session_state.rv, st.session_state.fe = "RIVAL", datetime.now().strftime("%d/%m/%Y")
 
 s = st.session_state
-if not s.ex: st_autorefresh(1000, key="f5_refresh_v56")
+if not s.ex: st_autorefresh(1000, key="f5_refresh_v57")
 
 ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr)
 mp, sp = divmod(int(tr if s.pa=="1T" else tr+1200), 60)
 
-# CABECERA CON ESCUDO
+# CABECERA
 st.markdown(f"""
     <div class="header-container">
-        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png" width="50">
-        <h1 class="title">M A T C H &nbsp; C O N T R O L</h1>
+        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png" width="40">
+        <h1 class="title">MATCH CONTROL</h1>
     </div>
     """, unsafe_allow_html=True)
 
-d1,d2,d3 = st.columns([2,1,1])
-s.rv = d1.text_input("RIVAL", s.rv, key="irv").upper()
-s.fe = d2.text_input("FECHA", s.fe, key="ife")
-if d3.button("🗑️ RESET TOTAL", key="main_rst"):
+# FILA RIVAL Y FECHA (Compacta)
+d1, d2, d3 = st.columns([2, 1, 1])
+s.rv = d1.text_input("RIVAL", s.rv, key="irv", label_visibility="collapsed").upper()
+s.fe = d2.text_input("FECHA", s.fe, key="ife", label_visibility="collapsed")
+if d3.button("🗑️ RESET", key="main_rst"):
     st.session_state.clear()
     st.rerun()
 
-st.divider()
-
-c1,c2,c3 = st.columns([3,2.5,3])
+# MARCADOR CENTRAL
+c1, c2, c3 = st.columns([3, 2.5, 3])
 
 with c1:
     st.metric(f"LUD | ⚽ {s.ml} | ❌ {s.fl}", s.ml)
@@ -94,22 +93,19 @@ with c1:
                     st.rerun()
     if cf1.button("F+", key="flp_btn"): s.fl+=1; st.rerun()
     if cf2.button("F-", key="flm_btn"): s.fl=max(0, s.fl-1); st.rerun()
-    
     t1,t2 = st.columns(2)
-    la, lr = s.al, s.rl
-    if t1.button(f"🟨 {la}", key="btn_tal"): s.al+=1; st.rerun()
-    if t2.button(f"🟥 {lr}", key="btn_trl"): s.rl+=1; st.rerun()
-
+    if t1.button(f"🟨 {s.al}", key="btn_tal"): s.al+=1; st.rerun()
+    if t2.button(f"🟥 {s.rl}", key="btn_trl"): s.rl+=1; st.rerun()
     p_col, d_col = st.columns(2)
     with p_col:
-        st.markdown("<div class='label-x'>🧤 PORTERO</div>", 1)
+        st.markdown("<div class='label-x'>🧤 PORT</div>", 1)
         px1, px2 = st.columns(2)
         if px1.button(f"🧤{s.pm}", key="pm_btn"): s.pm += 1; st.rerun()
         if px2.button(f"👟{s.pp}", key="pp_btn"): s.pp += 1; st.rerun()
     with d_col:
         tot_d = s.dok + s.dko
         perc = (s.dok/tot_d*100) if tot_d > 0 else 0
-        st.markdown(f"<div class='label-x'>⚔️ DUELOS ({perc:.0f}%)</div>", 1)
+        st.markdown(f"<div class='label-x'>⚔️ ({perc:.0f}%)</div>", 1)
         dx1, dx2 = st.columns(2)
         if dx1.button(f"✅{s.dok}", key="dok_btn"): s.dok += 1; st.rerun()
         if dx2.button(f"❌{s.dko}", key="dko_btn"): s.dko += 1; st.rerun()
@@ -127,7 +123,7 @@ with c2:
             for j in s.js:
                 if j["p"] and j["i"]: d_d = ah-j["i"]; j["tt"]+=d_d; j["tot"]+=d_d; j["i"]=None
         st.rerun()
-    for g in s.gi[-2:]:
+    for g in s.gi[-1:]: # Solo mostramos el último gol para ahorrar espacio
         st.markdown(f"<p style='font-size:0.8rem;margin:0;text-align:center;'><b>{g['m']}</b> {g['j']}</p>", 1)
 
 with c3:
@@ -137,22 +133,21 @@ with c3:
         s.mr+=1; s.gi.append({"j":s.rv,"m":f"{mp:02d}:{sp:02d}"}); st.rerun()
     if cf1_r.button("F+", key="frp_btn"): s.fr+=1; st.rerun()
     if cf2_r.button("F-", key="frm_btn"): s.fr=max(0, s.fr-1); st.rerun()
-    
     tr1, tr2 = st.columns(2)
-    ra, rr = s.ar, s.rr
-    if tr1.button(f"🟨 {ra}", key="tar_r_btn"): s.ar+=1; st.rerun()
-    if tr2.button(f"🟥 {rr}", key="trr_r_btn"): s.rr+=1; st.rerun()
+    if tr1.button(f"🟨 {s.ar}", key="tar_r_btn"): s.ar+=1; st.rerun()
+    if tr2.button(f"🟥 {s.rr}", key="trr_r_btn"): s.rr+=1; st.rerun()
 
 st.divider()
 
+# JUGADORES
 cols = st.columns(5)
 for idx, j in enumerate(s.js):
     with cols[idx%5]:
         with st.container(border=True):
             tc = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             mj, vj = divmod(int(tc), 60)
-            st.markdown(f"<p style='margin:0;font-size:0.85rem;'>{'🟢' if j['p'] else '🔴'} <b>{j['n']}</b> (R:{j['r']})</p>", 1)
-            st.markdown(f"<h3 style='margin:0;text-align:center;'>{mj:02d}:{vj:02d}</h3>", 1)
+            st.markdown(f"<p style='margin:0;font-size:0.8rem;'>{'🟢' if j['p'] else '🔴'} <b>{j['n']}</b> <small>(R:{j['r']})</small></p>", 1)
+            st.markdown(f"<h4 style='margin:0;text-align:center;'>{mj:02d}:{vj:02d}</h4>", 1)
             if st.button("CAMBIO", key=f"c_idx_{idx}", use_container_width=1):
                 if not j["p"] and sum(1 for x in s.js if x["p"])<5:
                     j["p"], j["i"], j["r"] = True, (ah if s.on else None), j["r"]+1
@@ -164,9 +159,9 @@ for idx, j in enumerate(s.js):
 
 tab1, tab2 = st.tabs(["📊 TOTALES", "💾 EXCEL"])
 with tab1:
-    st.write(f"Duelos: ✅{s.dok} ❌{s.dko} ({perc:.1f}%) | Portero: 🧤{s.pm} 👟{s.pp}")
+    st.write(f"Duelos: ✅{s.dok} ❌{s.dko} ({perc:.1f}%) | Port: 🧤{s.pm} 👟{s.pp}")
     mc = st.columns(5)
     for idx, j in enumerate(s.js):
         tl = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
         mt, vt = divmod(int(tl), 60)
-        mc[idx%5].write(f"**{j['n']}**: {mt:02d}:{vt:02d} (G:{j['g']})")
+        mc[idx%5].write(f"**{j['n']}**: {mt:02d}:{vt:02d}")
