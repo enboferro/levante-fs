@@ -4,45 +4,22 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v5.8", layout="wide")
+st.set_page_config(page_title="LUD Match Control v6.0", layout="wide")
 
-# CSS OPTIMIZADO: AJUSTE DE RECUADROS Y FUENTES
 st.markdown("""
     <style>
     .block-container {padding-top:0rem; padding-bottom:0rem; padding-left:0.5rem; padding-right:0.5rem;}
     [data-testid="stVerticalBlock"] > div { gap: 0rem !important; }
-    
-    /* Forzar que las columnas no tengan margen interno que desborde botones */
     [data-testid="column"] { padding: 0px 2px !important; }
-
-    div.stButton > button {
-        border-radius: 4px;
-        height: 2.1em;
-        width: 100%;
-        font-size: 0.85rem !important;
-        font-weight: bold !important;
-        padding: 0px !important;
-    }
-    
+    div.stButton > button { border-radius: 4px; height: 2.1em; width: 100%; font-size: 0.85rem !important; font-weight: bold !important; padding: 0px !important; }
     div.stButton > button:active { transform: scale(0.95); background-color: #003D7A !important; }
-
-    .header-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        border-bottom: 2px solid #ed1c24;
-        margin-bottom: 5px;
-    }
-
+    .header-container { display: flex; align-items: center; justify-content: center; gap: 10px; border-bottom: 2px solid #ed1c24; margin-bottom: 5px; }
     .title {color:#003D7A; font-size:1.4rem; font-weight:bold; margin:0;}
-    
-    /* Estilo para etiquetas y % de duelos */
     .label-x {font-size:0.65rem; font-weight:700; text-align:center; color:#444; margin-top:1px; text-transform: uppercase;}
     .perc-bold {font-weight: 800; color: #000; font-size: 0.75rem;}
-    
+    /* Estilo para las métricas pequeñas en la ficha */
+    .mini-stats { font-size: 0.7rem; color: #666; line-height: 1; margin-top: 2px; }
     hr { margin: 0.4rem 0px !important; }
-
     button[key*="dok_btn"] { background-color: #e8f5e9 !important; border: 1px solid #28a745 !important; }
     button[key*="dko_btn"] { background-color: #ffebee !important; border: 1px solid #dc3545 !important; }
     </style>
@@ -55,31 +32,24 @@ if 'js' not in st.session_state:
     st.session_state.al, st.session_state.rl, st.session_state.ar, st.session_state.rr, st.session_state.ml, st.session_state.mr, st.session_state.fl, st.session_state.fr = 0,0,0,0,0,0,0,0
     st.session_state.ta, st.session_state.ic, st.session_state.on, st.session_state.pa, st.session_state.ex = 0.0,None,False,"1T",False
     st.session_state.rv, st.session_state.fe = "RIVAL", datetime.now().strftime("%d/%m/%Y")
+    st.session_state.hist = {}
 
 s = st.session_state
-if not s.ex: st_autorefresh(1000, key="f5_v58")
+if not s.ex: st_autorefresh(1000, key="f5_v60")
 
 ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr)
 mp, sp = divmod(int(tr if s.pa=="1T" else tr+1200), 60)
 
-# CABECERA
-st.markdown(f"""
-    <div class="header-container">
-        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png" width="35">
-        <h1 class="title">MATCH CONTROL</h1>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown(f'<div class="header-container"><img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png" width="35"><h1 class="title">MATCH CONTROL</h1></div>', unsafe_allow_html=True)
 
 d1, d2, d3 = st.columns([2, 1, 1])
 s.rv = d1.text_input("RIVAL", s.rv, key="irv", label_visibility="collapsed").upper()
 s.fe = d2.text_input("FECHA", s.fe, key="ife", label_visibility="collapsed")
-if d3.button("🗑️ RESET", key="main_rst"):
-    st.session_state.clear(); st.rerun()
+if d3.button("🗑️ RESET"): st.session_state.clear(); st.rerun()
 
 c1, c2, c3 = st.columns([3.2, 2.2, 3.2])
-
 with c1:
     st.metric(f"LUD | ⚽ {s.ml} | ❌ {s.fl}", s.ml)
     cg, cf1, cf2 = st.columns([1.4, 0.8, 0.8])
@@ -90,12 +60,9 @@ with c1:
                     s.ml+=1; j["g"]+=1; s.gi.append({"j":j["n"],"m":f"{mp:02d}:{sp:02d}"}); st.rerun()
     if cf1.button("F+", key="flp"): s.fl+=1; st.rerun()
     if cf2.button("F-", key="flm"): s.fl=max(0, s.fl-1); st.rerun()
-    
     t1, t2 = st.columns(2)
     if t1.button(f"🟨 {s.al}", key="tal_l"): s.al+=1; st.rerun()
     if t2.button(f"🟥 {s.rl}", key="trl_l"): s.rl+=1; st.rerun()
-
-    # BLOQUE PORTERO Y DUELOS AJUSTADO
     p_col, d_col = st.columns(2)
     with p_col:
         st.markdown("<div class='label-x'>PORTERO</div>", 1)
@@ -123,14 +90,12 @@ with c2:
             for j in s.js:
                 if j["p"] and j["i"]: d_d = ah-j["i"]; j["tt"]+=d_d; j["tot"]+=d_d; j["i"]=None
         st.rerun()
-    for g in s.gi[-1:]:
-        st.markdown(f"<p style='font-size:0.75rem;margin:0;text-align:center;'><b>{g['m']}</b> {g['j']}</p>", 1)
+    for g in s.gi[-1:]: st.markdown(f"<p style='font-size:0.75rem;margin:0;text-align:center;'><b>{g['m']}</b> {g['j']}</p>", 1)
 
 with c3:
     st.metric(f"{s.rv[:8]} | ⚽ {s.mr} | ❌ {s.fr}", s.mr)
     cg_r, cf1_r, cf2_r = st.columns([1.4, 0.8, 0.8])
-    if cg_r.button("⚽ GOL", key="gr_r"):
-        s.mr+=1; s.gi.append({"j":s.rv,"m":f"{mp:02d}:{sp:02d}"}); st.rerun()
+    if cg_r.button("⚽ GOL", key="gr_r"): s.mr+=1; s.gi.append({"j":s.rv,"m":f"{mp:02d}:{sp:02d}"}); st.rerun()
     if cf1_r.button("F+", key="frp"): s.fr+=1; st.rerun()
     if cf2_r.button("F-", key="frm"): s.fr=max(0, s.fr-1); st.rerun()
     tr1, tr2 = st.columns(2)
@@ -139,14 +104,33 @@ with c3:
 
 st.divider()
 
+# JUGADORES (Ficha optimizada con micro-estadísticas)
 cols = st.columns(5)
 for idx, j in enumerate(s.js):
     with cols[idx%5]:
         with st.container(border=True):
+            # Calcular tiempo turno
             tc = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             mj, vj = divmod(int(tc), 60)
-            st.markdown(f"<p style='margin:0;font-size:0.75rem;'>{'🟢' if j['p'] else '🔴'} <b>{j['n']}</b> <small>(R:{j['r']})</small></p>", 1)
-            st.markdown(f"<h4 style='margin:0;text-align:center;'>{mj:02d}:{vj:02d}</h4>", 1)
+            
+            # Calcular tiempo total acumulado
+            tl = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
+            mt, vt = divmod(int(tl), 60)
+            
+            # Fila de Nombre y Rotación
+            st.markdown(f"<p style='margin:0;font-size:0.75rem;'>{'🟢' if j['p'] else '🔴'} <b>{j['n']}</b> <span style='float:right; color:#888;'>R:{j['r']}</span></p>", unsafe_allow_html=True)
+            
+            # Tiempo del Turno Actual (Grande)
+            st.markdown(f"<h4 style='margin:0;text-align:center;'>{mj:02d}:{vj:02d}</h4>", unsafe_allow_html=True)
+            
+            # Micro-totales (Goles y Tiempo acumulado)
+            st.markdown(f"""
+                <div style='display:flex; justify-content:space-between;' class='mini-stats'>
+                    <span>⚽ {j['g']}</span>
+                    <span>Σ {mt:02d}:{vt:02d}</span>
+                </div>
+                """, unsafe_allow_html=True)
+            
             if st.button("CAMBIO", key=f"c_idx_{idx}", use_container_width=1):
                 if not j["p"] and sum(1 for x in s.js if x["p"])<5:
                     j["p"], j["i"], j["r"] = True, (ah if s.on else None), j["r"]+1
@@ -156,6 +140,9 @@ for idx, j in enumerate(s.js):
                     j["p"], j["i"] = False, None
                 st.rerun()
 
+# PESTAÑA DE RESUMEN
 tab1, tab2 = st.tabs(["📊 TOTALES", "💾 EXCEL"])
 with tab1:
-    st.write(f"Duelos: ✅{s.dok} ❌{s.dko} ({perc:.1f}%) | Portero: 🧤{s.pm} 👟{s.pp}")
+    col_t1, col_t2 = st.columns(2)
+    with col_t1:
+        st.write("**Resumen Actual:**")
