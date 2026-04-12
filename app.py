@@ -4,7 +4,7 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v6.1", layout="wide")
+st.set_page_config(page_title="LUD Match Control v6.2", layout="wide")
 
 st.markdown("""
     <style>
@@ -17,17 +17,8 @@ st.markdown("""
     .title {color:#003D7A; font-size:1.4rem; font-weight:bold; margin:0;}
     .label-x {font-size:0.65rem; font-weight:700; text-align:center; color:#444; margin-top:1px; text-transform: uppercase;}
     .perc-bold {font-weight: 800; color: #000; font-size: 0.75rem;}
-    
-    /* Estilo para las métricas en negrita y más legibles */
-    .mini-stats { 
-        font-size: 0.8rem; 
-        font-weight: 700; 
-        color: #333; 
-        line-height: 1.2; 
-        margin-top: 3px; 
-    }
+    .mini-stats { font-size: 0.8rem; font-weight: 700; color: #333; line-height: 1.2; margin-top: 3px; }
     .rot-bold { font-weight: 800; color: #555; font-size: 0.8rem; }
-    
     hr { margin: 0.4rem 0px !important; }
     button[key*="dok_btn"] { background-color: #e8f5e9 !important; border: 1px solid #28a745 !important; }
     button[key*="dko_btn"] { background-color: #ffebee !important; border: 1px solid #dc3545 !important; }
@@ -44,7 +35,7 @@ if 'js' not in st.session_state:
     st.session_state.hist = {}
 
 s = st.session_state
-if not s.ex: st_autorefresh(1000, key="f5_v61")
+if not s.ex: st_autorefresh(1000, key="f5_v62")
 
 ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -53,10 +44,25 @@ mp, sp = divmod(int(tr if s.pa=="1T" else tr+1200), 60)
 
 st.markdown(f'<div class="header-container"><img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png" width="35"><h1 class="title">MATCH CONTROL</h1></div>', unsafe_allow_html=True)
 
-d1, d2, d3 = st.columns([2, 1, 1])
+d1, d2, d3, d4 = st.columns([1.5, 1, 1, 0.8])
 s.rv = d1.text_input("RIVAL", s.rv, key="irv", label_visibility="collapsed").upper()
 s.fe = d2.text_input("FECHA", s.fe, key="ife", label_visibility="collapsed")
-if d3.button("🗑️ RESET"): st.session_state.clear(); st.rerun()
+
+with d3:
+    with st.popover("5 INICIAL", use_container_width=True):
+        st.write("Selecciona 5 jugadores:")
+        cant_p = sum(1 for x in s.js if x["p"])
+        for j in s.js:
+            label = f"{'✅' if j['p'] else '⬜'} {j['n']}"
+            if st.button(label, key=f"init_{j['n']}", use_container_width=True):
+                if j["p"]: # Desmarcar
+                    j["p"], j["i"], j["r"] = False, None, 0
+                elif cant_p < 5: # Marcar si hay sitio
+                    j["p"], j["r"] = True, 1
+                    j["i"] = ah if s.on else None
+                st.rerun()
+
+if d4.button("🗑️ RESET"): st.session_state.clear(); st.rerun()
 
 c1, c2, c3 = st.columns([3.2, 2.2, 3.2])
 with c1:
@@ -97,7 +103,7 @@ with c2:
         else:
             s.ta += ah-s.ic; s.on, s.ic = False, None
             for j in s.js:
-                if j["p"] and j["i"]: d_d = ah-j["i"]; j["tt"]+=d_d; j["tot"]+=d_d; j["i"]=None
+                if j["p"] and j["i"]: d_d = ah-j["i"]; j["tot"]+=d_d; j["tt"]+=d_d; j["i"]=None
         st.rerun()
     for g in s.gi[-1:]: st.markdown(f"<p style='font-size:0.75rem;margin:0;text-align:center;'><b>{g['m']}</b> {g['j']}</p>", 1)
 
@@ -113,7 +119,6 @@ with c3:
 
 st.divider()
 
-# JUGADORES
 cols = st.columns(5)
 for idx, j in enumerate(s.js):
     with cols[idx%5]:
@@ -122,21 +127,9 @@ for idx, j in enumerate(s.js):
             mj, vj = divmod(int(tc), 60)
             tl = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             mt, vt = divmod(int(tl), 60)
-            
-            # Nombre y Rotación (Negrita reforzada)
             st.markdown(f"<p style='margin:0;font-size:0.75rem;'>{'🟢' if j['p'] else '🔴'} <b>{j['n']}</b> <span class='rot-bold' style='float:right;'>R:{j['r']}</span></p>", unsafe_allow_html=True)
-            
-            # Turno actual
             st.markdown(f"<h4 style='margin:0;text-align:center;'>{mj:02d}:{vj:02d}</h4>", unsafe_allow_html=True)
-            
-            # Totales (Negrita y más grandes)
-            st.markdown(f"""
-                <div style='display:flex; justify-content:space-between;' class='mini-stats'>
-                    <span>⚽ <b>{j['g']}</b></span>
-                    <span>Σ <b>{mt:02d}:{vt:02d}</b></span>
-                </div>
-                """, unsafe_allow_html=True)
-            
+            st.markdown(f"<div style='display:flex; justify-content:space-between;' class='mini-stats'><span>⚽ <b>{j['g']}</b></span><span>Σ <b>{mt:02d}:{vt:02d}</b></span></div>", unsafe_allow_html=True)
             if st.button("CAMBIO", key=f"c_idx_{idx}", use_container_width=1):
                 if not j["p"] and sum(1 for x in s.js if x["p"])<5:
                     j["p"], j["i"], j["r"] = True, (ah if s.on else None), j["r"]+1
