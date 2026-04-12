@@ -4,30 +4,21 @@ import time
 import io
 from streamlit_autorefresh import st_autorefresh
 
-# CONFIGURACIÓN Y ESTILO CSS PARA SENSIBILIDAD
-st.set_page_config(page_title="LUD v3.7 Pro-Touch", layout="wide")
+st.set_page_config(page_title="LUD v3.8 Ultra-Compact", layout="wide")
 
+# CSS para reducir márgenes y compactar botones
 st.markdown("""
     <style>
-    /* Aumentar tamaño y respuesta de todos los botones */
+    .block-container {padding-top: 1rem; padding-bottom: 0rem;}
     div.stButton > button {
-        width: 100%;
-        border-radius: 10px;
-        height: 3.5em;
-        font-weight: bold;
-        font-size: 1.1rem !important;
-        transition: all 0.1s ease;
-        border: 1px solid #ddd;
+        border-radius: 5px;
+        height: 2.2em;
+        padding: 0px;
+        font-size: 0.9rem !important;
     }
-    /* Feedback visual inmediato al tocar en iPad */
-    div.stButton > button:active {
-        transform: scale(0.95);
-        background-color: #003D7A !important;
-        color: white !important;
-    }
-    /* Estilo específico para los iconos de estadísticas */
-    .st-emotion-cache-12w0qpk e1nzilvr4 { 
-        gap: 0.5rem; 
+    /* Estilo para que las fichas sean más bajas */
+    [data-testid="stVerticalBlock"] > div {
+        gap: 0.1rem;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -48,70 +39,73 @@ rem = max(0, 1200 - tr)
 c1,c2,c3 = st.columns([3,2,1])
 with c1:
     ci,ct = st.columns([0.6,3.4])
-    ci.image("https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png", width=50)
+    ci.image("https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png", width=40)
     rv = ct.text_input("R", "RIVAL", label_visibility="collapsed").upper()
 with c2:
     qa = s.q1 if s.pa == "1T" else s.q2
     if qa is None:
-        sel = st.multiselect(f"Quinteto {s.pa}", [j["n"] for j in s.js], max_selections=5)
-        if st.button("🔒 FIJAR INICIALES"):
+        sel = st.multiselect(f"Q {s.pa}", [j["n"] for j in s.js], max_selections=5)
+        if st.button("🔒 FIJAR"):
             if len(sel)==5:
                 if s.pa=="1T": s.q1=sel
                 else: s.q2=sel
                 for j in s.js: j["p"]=(j["n"] in sel); j["i"]=None
                 st.rerun()
-    else: st.success(f"✅ Q {s.pa} fijo")
-if c3.button("🔄 RESET"): s.clear(); st.rerun()
+    else: st.success(f"✅ Q {s.pa}")
+if c3.button("🔄"): s.clear(); st.rerun()
 
-t1,t2,t3 = st.tabs(["⏱️ PARTIDO", "📊 TOTALES", "💾 FINAL"])
+t1,t2,t3 = st.tabs(["⏱️ PARTIDO", "📊 TOTALES", "💾 FIN"])
 
 with t1:
     m1,m2,m3 = st.columns([2,3,2])
     with m1:
         st.metric("LUD",s.ml,f"F:{s.fl}")
-        if st.button("⚽ GOL LUD",use_container_width=1): s.ml+=1; st.rerun()
+        if st.button("⚽ GOL", key="glud"): s.ml+=1; st.rerun()
         f1,f2 = st.columns(2)
         if f1.button("F+",key="flp"): s.fl+=1; st.rerun()
         if f2.button("F-",key="flm"): s.fl=max(0,s.fl-1); st.rerun()
     with m2:
         m,v = divmod(int(rem),60)
-        st.markdown(f"<h1 style='text-align:center;font-size:4.5rem;color:red;margin:0;'>{m:02d}:{v:02d}</h1>",1)
-        if not s.on:
-            if st.button("▶ START",use_container_width=1,type="primary"):
-                s.ic,s.on = ah,True
+        st.markdown(f"<h1 style='text-align:center;font-size:3.5rem;color:red;margin:0;'>{m:02d}:{v:02d}</h1>",1)
+        btn_txt = "⏸ STOP" if s.on else "▶ START"
+        if st.button(btn_txt, use_container_width=1, type="primary" if not s.on else "secondary"):
+            if not s.on:
+                s.ic, s.on = ah, True
                 for j in s.js: 
                     if j["p"]: j["i"]=ah
-                st.rerun()
-        else:
-            if st.button("⏸ STOP",use_container_width=1):
+            else:
                 s.ta += ah-s.ic
                 s.on,s.ic = False,None
                 for j in s.js:
                     if j["p"] and j["i"]: j["t"]+=ah-j["i"]; j["i"]=None
-                st.rerun()
+            st.rerun()
     with m3:
         st.metric(rv[:5],s.mr,f"F:{s.fr}")
-        if st.button(f"⚽ GOL {rv[:3]}",use_container_width=1): s.mr+=1; st.rerun()
+        if st.button(f"⚽ {rv[:3]}", key="griv"): s.mr+=1; st.rerun()
         r1,r2 = st.columns(2)
         if r1.button("F+",key="frp"): s.fr+=1; st.rerun()
         if r2.button("F-",key="frm"): s.fr=max(0,s.fr-1); st.rerun()
 
     st.divider()
-    cols = st.columns(4)
+    
+    # JUGADORES EN 5 COLUMNAS Y DISEÑO MINI
+    cols = st.columns(5)
     for idx,j in enumerate(s.js):
-        with cols[idx%4]:
+        with cols[idx%5]:
             with st.container(border=True):
                 tp = j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-                m,v = divmod(int(tp),60)
-                st.write(f"{'🟢' if j['p'] else '🔴'} **{j['n']}** | {m:02d}:{v:02d}")
-                # BOTONERA 2X2 CON SENSIBILIDAD
-                r1_1, r1_2 = st.columns(2)
-                if r1_1.button("🎯",key=f"t{idx}",use_container_width=1): j["s"]+=1
-                if r1_2.button("🛡️",key=f"r{idx}",use_container_width=1): j["r"]+=1
-                r2_1, r2_2 = st.columns(2)
-                if r2_1.button("❌",key=f"e{idx}",use_container_width=1): j["e"]+=1
-                if r2_2.button("⚽",key=f"g{idx}",use_container_width=1): j["g"]+=1; s.ml+=1; st.rerun()
-                st.write("")
+                m_j,v_j = divmod(int(tp),60)
+                # Nombre y tiempo en pequeño
+                st.markdown(f"<p style='margin:0;font-size:0.8rem;'>{'🟢' if j['p'] else '🔴'} <b>{j['n']}</b></p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='margin:0;font-size:0.9rem;text-align:right;'><b>{m_j:02d}:{v_j:02d}</b></p>", unsafe_allow_html=True)
+                
+                # BOTONES EN UNA SOLA FILA (Ultra compactos)
+                b1,b2,b3,b4 = st.columns(4)
+                if b1.button("🎯",key=f"t{idx}"): j["s"]+=1
+                if b2.button("🛡️",key=f"r{idx}"): j["r"]+=1
+                if b3.button("❌",key=f"e{idx}"): j["e"]+=1
+                if b4.button("⚽",key=f"g{idx}"): j["g"]+=1; s.ml+=1; st.rerun()
+                
                 if st.button("CAMBIO",key=f"c{idx}",use_container_width=1):
                     if not j["p"] and sum(1 for x in s.js if x["p"])<5:
                         j["p"],j["i"] = True,(ah if s.on else None)
@@ -129,7 +123,7 @@ with t2:
 
 with t3:
     if s.pa=="1T":
-        if st.button("🏁 FINALIZAR 1T",use_container_width=1,type="primary"):
+        if st.button("🏁 FIN 1T",use_container_width=1,type="primary"):
             if s.on:
                 s.ta+=ah-s.ic
                 for j in s.js:
@@ -139,7 +133,7 @@ with t3:
             st.rerun()
     else: st.success("2T EN CURSO")
     st.divider()
-    if st.button("📊 PREPARAR EXCEL"):
+    if st.button("📊 GENERAR EXCEL"):
         s.ex = True
         dt = []
         for j in s.js:
@@ -149,6 +143,5 @@ with t3:
         df = pd.DataFrame(dt)
         towrite = io.BytesIO()
         with pd.ExcelWriter(towrite, engine='xlsxwriter') as writer:
-            df.to_excel(writer, index=False, sheet_name='Stats')
-        st.download_button("📥 DESCARGAR EXCEL", towrite.getvalue(), f"LUD_{rv}.xlsx", "application/vnd.ms-excel")
-        if st.button("↩️ VOLVER"): s.ex=False; st.rerun()
+            df.to_excel(writer, index=False)
+        st.download_button("📥 DESCARGAR EXCEL", towrite.getvalue(), f"Stats_{rv}.xlsx")
