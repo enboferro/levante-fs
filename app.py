@@ -4,11 +4,35 @@ import time
 import io
 from streamlit_autorefresh import st_autorefresh
 
-# CONFIGURACIÓN INICIAL
-st.set_page_config(page_title="LUD v3.6 FIX", layout="wide")
-s = st.session_state
+# CONFIGURACIÓN Y ESTILO CSS PARA SENSIBILIDAD
+st.set_page_config(page_title="LUD v3.7 Pro-Touch", layout="wide")
 
-# 1. INICIALIZAR VARIABLES
+st.markdown("""
+    <style>
+    /* Aumentar tamaño y respuesta de todos los botones */
+    div.stButton > button {
+        width: 100%;
+        border-radius: 10px;
+        height: 3.5em;
+        font-weight: bold;
+        font-size: 1.1rem !important;
+        transition: all 0.1s ease;
+        border: 1px solid #ddd;
+    }
+    /* Feedback visual inmediato al tocar en iPad */
+    div.stButton > button:active {
+        transform: scale(0.95);
+        background-color: #003D7A !important;
+        color: white !important;
+    }
+    /* Estilo específico para los iconos de estadísticas */
+    .st-emotion-cache-12w0qpk e1nzilvr4 { 
+        gap: 0.5rem; 
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+s = st.session_state
 if 'js' not in s:
     n = ["Serra","Julian","Omar","Tony","Rochina","Benages","Pedrito","Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Jose","Coque","Nacho Gomez"]
     s.js = [{"n":x,"t":0.0,"t1":0.0,"i":None,"p":False,"g":0,"s":0,"e":0,"r":0} for x in n]
@@ -20,13 +44,12 @@ ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr)
 
-# --- CABECERA Y QUINTETOS ---
+# --- CABECERA ---
 c1,c2,c3 = st.columns([3,2,1])
 with c1:
     ci,ct = st.columns([0.6,3.4])
     ci.image("https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png", width=50)
     rv = ct.text_input("R", "RIVAL", label_visibility="collapsed").upper()
-
 with c2:
     qa = s.q1 if s.pa == "1T" else s.q2
     if qa is None:
@@ -38,14 +61,11 @@ with c2:
                 for j in s.js: j["p"]=(j["n"] in sel); j["i"]=None
                 st.rerun()
     else: st.success(f"✅ Q {s.pa} fijo")
+if c3.button("🔄 RESET"): s.clear(); st.rerun()
 
-if c3.button("🔄 RESET"):
-    s.clear(); st.rerun()
-
-t1,t2,t3 = st.tabs(["⏱️ PARTIDO", "📊 TOTALES", "💾 EXPORTAR"])
+t1,t2,t3 = st.tabs(["⏱️ PARTIDO", "📊 TOTALES", "💾 FINAL"])
 
 with t1:
-    # MARCADOR
     m1,m2,m3 = st.columns([2,3,2])
     with m1:
         st.metric("LUD",s.ml,f"F:{s.fl}")
@@ -55,7 +75,7 @@ with t1:
         if f2.button("F-",key="flm"): s.fl=max(0,s.fl-1); st.rerun()
     with m2:
         m,v = divmod(int(rem),60)
-        st.markdown(f"<h1 style='text-align:center;font-size:4rem;color:red;margin:0;'>{m:02d}:{v:02d}</h1>",1)
+        st.markdown(f"<h1 style='text-align:center;font-size:4.5rem;color:red;margin:0;'>{m:02d}:{v:02d}</h1>",1)
         if not s.on:
             if st.button("▶ START",use_container_width=1,type="primary"):
                 s.ic,s.on = ah,True
@@ -77,7 +97,6 @@ with t1:
         if r2.button("F-",key="frm"): s.fr=max(0,s.fr-1); st.rerun()
 
     st.divider()
-    # JUGADORES
     cols = st.columns(4)
     for idx,j in enumerate(s.js):
         with cols[idx%4]:
@@ -85,12 +104,14 @@ with t1:
                 tp = j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
                 m,v = divmod(int(tp),60)
                 st.write(f"{'🟢' if j['p'] else '🔴'} **{j['n']}** | {m:02d}:{v:02d}")
+                # BOTONERA 2X2 CON SENSIBILIDAD
                 r1_1, r1_2 = st.columns(2)
                 if r1_1.button("🎯",key=f"t{idx}",use_container_width=1): j["s"]+=1
                 if r1_2.button("🛡️",key=f"r{idx}",use_container_width=1): j["r"]+=1
                 r2_1, r2_2 = st.columns(2)
                 if r2_1.button("❌",key=f"e{idx}",use_container_width=1): j["e"]+=1
                 if r2_2.button("⚽",key=f"g{idx}",use_container_width=1): j["g"]+=1; s.ml+=1; st.rerun()
+                st.write("")
                 if st.button("CAMBIO",key=f"c{idx}",use_container_width=1):
                     if not j["p"] and sum(1 for x in s.js if x["p"])<5:
                         j["p"],j["i"] = True,(ah if s.on else None)
@@ -116,41 +137,18 @@ with t3:
             for j in s.js: j["t1"]=j["t"]; j["t"]=0.0; j["i"]=None
             s.fl,s.fr,s.ta,s.ic,s.on,s.pa = 0,0,0.0,None,False,"2T"
             st.rerun()
-    else:
-        st.success("2T EN CURSO")
-
+    else: st.success("2T EN CURSO")
     st.divider()
-    
-    # NUEVA FUNCIÓN DE EXCEL MÁS ROBUSTA
-    if st.button("📊 PREPARAR INFORME"):
+    if st.button("📊 PREPARAR EXCEL"):
         s.ex = True
         dt = []
         for j in s.js:
             tf = j["t1"]+j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             m_f,v_f = divmod(int(tf),60)
-            dt.append({
-                "Jugador": j["n"],
-                "Minutos": f"{m_f:02d}:{v_f:02d}",
-                "Goles": j["g"], "Tiros": j["s"], "Robos": j["r"], "Perdidas": j["e"]
-            })
-        
+            dt.append({"Jugador":j["n"],"Tiempo":f"{m_f:02d}:{v_f:02d}","Goles":j["g"],"Tiros":j["s"],"Robos":j["r"],"Perdidas":j["e"]})
         df = pd.DataFrame(dt)
         towrite = io.BytesIO()
-        # Usamos engine='xlsxwriter' que suele dar menos errores en la nube
-        try:
-            with pd.ExcelWriter(towrite, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False, sheet_name='Estadisticas')
-            st.download_button(
-                label="📥 CLIC PARA DESCARGAR EXCEL",
-                data=towrite.getvalue(),
-                file_name=f"LUD_vs_{rv}.xlsx",
-                mime="application/vnd.ms-excel"
-            )
-        except:
-            # Si falla el Excel, te damos un CSV de emergencia que NO falla nunca
-            st.warning("Error con Excel. Descargando formato CSV compatible:")
-            st.download_button("📥 DESCARGAR CSV", df.to_csv(index=False).encode('utf-8'), "LUD_Stats.csv")
-
-        if st.button("↩️ VOLVER AL PARTIDO"):
-            s.ex = False
-            st.rerun()
+        with pd.ExcelWriter(towrite, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name='Stats')
+        st.download_button("📥 DESCARGAR EXCEL", towrite.getvalue(), f"LUD_{rv}.xlsx", "application/vnd.ms-excel")
+        if st.button("↩️ VOLVER"): s.ex=False; st.rerun()
