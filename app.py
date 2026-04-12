@@ -31,7 +31,7 @@ st.markdown("""
 
 def init_state(force=False):
     if 'js' not in st.session_state or force:
-        n = ["Serra","Julian","Omar","Tony","Rochina","Benages","Pedrito","Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Jose","Coque","Nacho Gomez"]
+        n = ["Serra","Julian","Omar","Tony","Rochina","Benages","Pedrito","Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Jose","Coque","Nacho"]
         st.session_state.js = [{"n":x,"t_turno":0.0,"t_total":0.0,"rot":0,"i":None,"p":False,"g":0} for x in n]
         st.session_state.goles_info = []
         st.session_state.p_mano, st.session_state.p_pie = 0, 0
@@ -94,7 +94,7 @@ with c2: # BLOQUE CENTRAL: CRONO
                 if j["p"] and j["i"]: 
                     dur = ah-j["i"]; j["t_turno"]+=dur; j["t_total"]+=dur; j["i"]=None
         st.rerun()
-    with st.expander("⚽ ÚLTIMOS GOLES", expanded=True):
+    with st.expander("⚽GOLES", expanded=True):
         for g in s.goles_info[-2:]: st.markdown(f"<div class='goleador-box'>{g['min']}:{g['seg']} - {g['jugador']}</div>", 1)
     if st.button("🗑️ RESET", use_container_width=1, key="k_res"): init_state(True); st.rerun()
 
