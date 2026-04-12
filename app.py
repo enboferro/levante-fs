@@ -4,7 +4,7 @@ import time
 import io
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD v3.9 Portero", layout="wide")
+st.set_page_config(page_title="LUD v4.0 Pro", layout="wide")
 
 st.markdown("""
     <style>
@@ -16,7 +16,7 @@ st.markdown("""
         font-size: 0.9rem !important;
     }
     [data-testid="stVerticalBlock"] > div { gap: 0.1rem; }
-    .port-bg { background-color: #f0f2f6; padding: 10px; border-radius: 10px; text-align: center; }
+    .btn-red { color: red !important; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -24,8 +24,9 @@ s = st.session_state
 if 'js' not in s:
     n = ["Serra","Julian","Omar","Tony","Rochina","Benages","Pedrito","Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Jose","Coque","Nacho Gomez"]
     s.js = [{"n":x,"t":0.0,"t1":0.0,"i":None,"p":False,"g":0,"s":0,"e":0,"r":0} for x in n]
-    # Estadísticas del Portero
+    # Portero y Tarjetas
     s.p_mano, s.p_pie = 0, 0
+    s.ta_l, s.tr_l, s.ta_r, s.tr_r = 0, 0, 0, 0
     s.ml,s.mr,s.fl,s.fr,s.ta,s.ic,s.on,s.pa,s.q1,s.q2,s.ex = 0,0,0,0,0.0,None,False,"1T",None,None,False
 
 if not s.ex: st_autorefresh(1000, key="f5")
@@ -57,13 +58,19 @@ t1,t2,t3 = st.tabs(["⏱️ PARTIDO", "📊 TOTALES", "💾 FIN"])
 
 with t1:
     m1,m2,m3 = st.columns([2,3,2])
+    # MARCADOR LUD
     with m1:
-        st.metric("LUD",s.ml,f"F:{s.fl}")
+        st.metric("LUD",s.ml,f"Faltas: {s.fl}")
         if st.button("⚽ GOL", key="glud"): s.ml+=1; st.rerun()
         f1,f2 = st.columns(2)
         if f1.button("F+",key="flp"): s.fl+=1; st.rerun()
         if f2.button("F-",key="flm"): s.fl=max(0,s.fl-1); st.rerun()
+        # Tarjetas LUD
+        tjl, tcl = st.columns(2)
+        if tjl.button(f"🟨 {s.ta_l}", key="tal"): s.ta_l+=1; st.rerun()
+        if tcl.button(f"🟥 {s.tr_l}", key="trl"): s.tr_l+=1; st.rerun()
     
+    # CENTRO: CRONO Y PORTERO
     with m2:
         m,v = divmod(int(rem),60)
         st.markdown(f"<h1 style='text-align:center;font-size:3.5rem;color:red;margin:0;'>{m:02d}:{v:02d}</h1>",1)
@@ -80,29 +87,38 @@ with t1:
                     if j["p"] and j["i"]: j["t"]+=ah-j["i"]; j["i"]=None
             st.rerun()
         
-        # --- APARTADO PORTERO ---
-        st.markdown("<div style='text-align:center; font-weight:bold; margin-top:10px;'>🧤 PORTERO</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align:center; font-weight:bold; margin-top:5px; font-size:0.8rem;'>🧤 PORTERO</div>", unsafe_allow_html=True)
+        # Portero con sumas y restas
         pm, pp = st.columns(2)
         if pm.button(f"🧤 {s.p_mano}", use_container_width=1): s.p_mano += 1; st.rerun()
         if pp.button(f"👟 {s.p_pie}", use_container_width=1): s.p_pie += 1; st.rerun()
+        rm, rp = st.columns(2)
+        if rm.button("−", key="rm"): s.p_mano = max(0, s.p_mano-1); st.rerun()
+        if rp.button("−", key="rp"): s.p_pie = max(0, s.p_pie-1); st.rerun()
 
+    # MARCADOR RIVAL
     with m3:
-        st.metric(rv[:5],s.mr,f"F:{s.fr}")
+        st.metric(rv[:5],s.mr,f"Faltas: {s.fr}")
         if st.button(f"⚽ {rv[:3]}", key="griv"): s.mr+=1; st.rerun()
         r1,r2 = st.columns(2)
         if r1.button("F+",key="frp"): s.fr+=1; st.rerun()
         if r2.button("F-",key="frm"): s.fr=max(0,s.fr-1); st.rerun()
+        # Tarjetas Rival
+        tjr, tcr = st.columns(2)
+        if tjr.button(f"🟨 {s.ta_r}", key="tar"): s.ta_r+=1; st.rerun()
+        if tcr.button(f"🟥 {s.tr_r}", key="trr"): s.tr_r+=1; st.rerun()
 
     st.divider()
     
+    # JUGADORES
     cols = st.columns(5)
     for idx,j in enumerate(s.js):
         with cols[idx%5]:
             with st.container(border=True):
                 tp = j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
                 m_j,v_j = divmod(int(tp),60)
-                st.markdown(f"<p style='margin:0;font-size:0.8rem;'>{'🟢' if j['p'] else '🔴'} <b>{j['n']}</b></p>", unsafe_allow_html=True)
-                st.markdown(f"<p style='margin:0;font-size:0.9rem;text-align:right;'><b>{m_j:02d}:{v_j:02d}</b></p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='margin:0;font-size:0.75rem;'>{'🟢' if j['p'] else '🔴'} <b>{j['n']}</b></p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='margin:0;font-size:0.85rem;text-align:right;'><b>{m_j:02d}:{v_j:02d}</b></p>", unsafe_allow_html=True)
                 
                 b1,b2,b3,b4 = st.columns(4)
                 if b1.button("🎯",key=f"t{idx}"): j["s"]+=1
@@ -119,7 +135,8 @@ with t1:
                     st.rerun()
 
 with t2:
-    st.write(f"**Paradas Portero:** Mano: {s.p_mano} | Pie: {s.p_pie}")
+    st.write(f"**Portería:** Paradas Mano: {s.p_mano} | Paradas Pie: {s.p_pie}")
+    st.write(f"**Tarjetas LUD:** 🟨 {s.ta_l} | 🟥 {s.tr_l} --- **Tarjetas {rv}:** 🟨 {s.ta_r} | 🟥 {s.tr_r}")
     mc = st.columns(5)
     for idx,j in enumerate(s.js):
         tt = j["t1"]+j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
@@ -134,21 +151,25 @@ with t3:
                 for j in s.js:
                     if j["p"] and j["i"]: j["t"]+=ah-j["i"]
             for j in s.js: j["t1"]=j["t"]; j["t"]=0.0; j["i"]=None
-            s.fl,s.fr,s.ta,s.ic,s.on,s.pa = 0,0,0.0,None,False,"2T"
+            s.fl, s.fr = 0, 0 # Reinicio de faltas por parte
+            s.ta, s.ic, s.on, s.pa = 0.0, None, False, "2T"
             st.rerun()
     else: st.success("2T EN CURSO")
     st.divider()
-    if st.button("📊 GENERAR EXCEL"):
+    if st.button("📊 GENERAR EXCEL FINAL"):
         s.ex = True
         dt = []
         for j in s.js:
             tf = j["t1"]+j["t"]+(ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             m_f,v_f = divmod(int(tf),60)
             dt.append({"Jugador":j["n"],"Tiempo":f"{m_f:02d}:{v_f:02d}","Goles":j["g"],"Tiros":j["s"],"Robos":j["r"],"Perdidas":j["e"]})
-        # Añadir fila de portero al Excel
-        dt.append({"Jugador":"PORTERO (TOTAL)","Tiempo":"","Goles":f"Mano:{s.p_mano}","Tiros":f"Pie:{s.p_pie}","Robos":"","Perdidas":""})
+        
+        dt.append({"Jugador":"---","Tiempo":"---","Goles":"---","Tiros":"---","Robos":"---","Perdidas":"---"})
+        dt.append({"Jugador":"TOTAL PORTERO","Tiempo":f"Mano:{s.p_mano}","Goles":f"Pie:{s.p_pie}","Tiros":"","Robos":"","Perdidas":""})
+        dt.append({"Jugador":"TARJETAS LUD","Tiempo":f"🟨 {s.ta_l}","Goles":f"🟥 {s.tr_l}","Tiros":"","Robos":"","Perdidas":""})
+        
         df = pd.DataFrame(dt)
         towrite = io.BytesIO()
         with pd.ExcelWriter(towrite, engine='xlsxwriter') as writer:
             df.to_excel(writer, index=False)
-        st.download_button("📥 DESCARGAR EXCEL", towrite.getvalue(), f"LUD_Stats_{rv}.xlsx")
+        st.download_button("📥 DESCARGAR EXCEL", towrite.getvalue(), f"Estadisticas_{rv}.xlsx")
