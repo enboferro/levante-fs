@@ -4,68 +4,63 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v7.3", layout="wide")
+st.set_page_config(page_title="LUD Match Control v7.4", layout="wide")
 
 st.markdown("""
     <style>
-    .block-container {padding-top:0rem; padding-bottom:0rem; padding-left:0.3rem; padding-right:0.3rem;}
+    .block-container {padding-top:0rem; padding-bottom:0rem; padding-left:0.2rem; padding-right:0.2rem;}
     [data-testid="stVerticalBlock"] > div { gap: 0rem !important; }
     
-    /* BOTÓN START/STOP */
+    /* SENSIBILIDAD MÁXIMA Y BOTONES ANCHOS */
+    div.stButton > button {
+        border-radius: 6px;
+        height: 2.5em; /* Botones más altos y fáciles de tocar */
+        width: 100%;
+        font-size: 0.9rem !important;
+        font-weight: 800 !important;
+        padding: 0px !important;
+        transition: transform 0.05s ease-in-out !important; /* Respuesta casi instantánea */
+    }
+
+    div.stButton > button:active {
+        transform: scale(0.92) !important;
+        background-color: #003D7A !important;
+        color: white !important;
+    }
+
+    /* BOTÓN START/STOP (Centro) */
     div.stButton > button[key="tm_m"] {
-        height: 2.8em !important;
+        height: 3em !important;
         font-size: 1.1rem !important;
         background-color: #003D7A !important;
         border: 2px solid #ed1c24 !important;
+        color: white;
     }
 
     /* BOTÓN CAMBIO */
     div.stButton > button[key^="c_"] {
-        height: 2.4em !important;
-        font-size: 0.9rem !important;
-        margin-top: 3px !important;
-        background-color: #f0f2f6 !important;
-        border: 1px solid #ccc !important;
+        height: 2.6em !important;
+        background-color: #f8f9fb !important;
+        border: 1px solid #bfc4cd !important;
     }
 
-    /* Estilos de botones de Faltas en Footer */
-    div.stButton > button[key^="flp"], div.stButton > button[key^="frp"] {
-        background-color: #e8f5e9 !important;
-        border: 1px solid #c3e6cb !important;
-        color: #155724 !important;
-    }
-    div.stButton > button[key^="flm"], div.stButton > button[key^="frm"] {
-        background-color: #fff5f5 !important;
-        border: 1px solid #f5c6cb !important;
-        color: #721c24 !important;
-    }
-
-    /* Botón Reset */
-    div.stButton > button[key="main_reset_btn"] {
-        font-size: 1.2rem !important;
-        height: 2.2em !important;
-        background-color: #fff1f1 !important;
-        border: 1px solid #ffcccc !important;
-    }
+    /* FALTAS Y TÉCNICO (Colores para diferenciar rápido) */
+    div.stButton > button[key*="p_big"] { background-color: #e8f5e9 !important; border: 1px solid #28a745 !important; }
+    div.stButton > button[key*="m_big"] { background-color: #ffebee !important; border: 1px solid #dc3545 !important; }
+    div.stButton > button[key^="tm_"] { background-color: #fff3e0 !important; border: 1px solid #ff9800 !important; }
 
     @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0.3;} 100% {opacity: 1;} }
     .blink { animation: blink 1s infinite; }
     .bonus-faltas { color: #ff0000; font-weight: 900; animation: blink 0.8s infinite; }
     .tm-alert { color: #ff9800; font-weight: bold; animation: blink 0.5s infinite; }
     
-    /* Ajuste de altura para TM para que cuadre con las dos filas de faltas */
-    div.stButton > button[key^="tm_l_btn"], div.stButton > button[key^="tm_r_btn"] {
-        height: 4.2em !important;
-    }
-
-    div.stButton > button { border-radius: 4px; height: 2em; width: 100%; font-size: 0.8rem !important; font-weight: bold !important; padding: 0px !important; }
-    div.stButton > button:active { transform: scale(0.95); background-color: #003D7A !important; color: white !important; }
-    
     .header-container { display: flex; align-items: center; justify-content: center; gap: 5px; border-bottom: 2px solid #ed1c24; margin-bottom: 2px; }
     .title {color:#003D7A; font-size:1rem; font-weight:bold; margin:0;}
-    .label-x {font-size:0.6rem; font-weight:700; text-align:center; color:#444; text-transform: uppercase; margin-bottom: 2px;}
+    .label-x {font-size:0.65rem; font-weight:800; text-align:center; color:#222; text-transform: uppercase; margin-bottom: 3px; background: #ddd; border-radius: 3px;}
     .mini-stats { font-size: 0.9rem !important; font-weight: 900 !important; color: #111; line-height: 1.1; margin-top: 2px; }
-    .footer-control { background-color: #f1f3f6; padding: 10px; border-radius: 10px; border: 1px solid #ccd1d9; margin-top: 8px; }
+    
+    /* CONTENEDOR INFERIOR */
+    .footer-control { background-color: #ffffff; padding: 12px; border-radius: 12px; border: 2px solid #003D7A; margin-top: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -79,7 +74,7 @@ if 'js' not in st.session_state:
     st.session_state.tm, st.session_state.tm_i = False, None
 
 s = st.session_state
-if not s.ex: st_autorefresh(1000, key="f5_v73")
+if not s.ex: st_autorefresh(1000, key="f5_refresh")
 
 ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -92,33 +87,32 @@ if s.tm:
     tm_sec = max(0, 60 - int(elapsed))
     if tm_sec == 0: s.tm = False
 
+# CABECERA
 st.markdown(f'<div class="header-container"><img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png" width="25"><h1 class="title">LUD MATCH CONTROL</h1></div>', unsafe_allow_html=True)
 
-d1, d2, d3, d4 = st.columns([1.5, 1, 1, 0.5])
-s.rv = d1.text_input("RIVAL", s.rv, key="irv", label_visibility="collapsed").upper()
-s.fe = d2.text_input("FECHA", s.fe, key="ife", label_visibility="collapsed")
-with d3:
+d_top1, d_top2, d_top3, d_top4 = st.columns([1.5, 1, 1, 0.5])
+s.rv = d_top1.text_input("R", s.rv, key="irv", label_visibility="collapsed").upper()
+s.fe = d_top2.text_input("F", s.fe, key="ife", label_visibility="collapsed")
+with d_top3:
     with st.popover("5 INICIAL", use_container_width=True):
         cp = sum(1 for x in s.js if x["p"])
         for j in s.js:
-            if st.button(f"{'✅' if j['p'] else '⬜'} {j['n']}", key=f"in_{j['n']}", use_container_width=True):
+            if st.button(f"{'✅' if j['p'] else '⬜'} {j['n']}", key=f"init_{j['n']}", use_container_width=True):
                 if j["p"]: j["p"], j["i"], j["r"] = False, None, 0
                 elif cp < 5: j["p"], j["r"] = True, 1; j["i"] = ah if s.on else None
                 st.rerun()
-if d4.button("🗑️", key="main_reset_btn", use_container_width=True): st.session_state.clear(); st.rerun()
+if d_top4.button("🗑️", key="main_reset_btn", use_container_width=True): st.session_state.clear(); st.rerun()
 
-c1, c2, c3 = st.columns([2, 4, 2])
-with c1:
+# MARCADOR
+c_score1, c_score2, c_score3 = st.columns([2, 4, 2])
+with c_score1:
     st.metric(f"LUD", s.ml)
-    if st.button("⚽ GOL LUD", key="btn_gol_lud_direct"):
-        s.ml += 1
-        s.gi.append({"team":"LUD", "name":"LUD", "m":min_game})
-        st.rerun()
+    if st.button("⚽ GOL LUD", key="btn_gol_lud"):
+        s.ml += 1; s.gi.append({"team":"LUD", "name":"LUD", "m":min_game}); st.rerun()
 
-with c2:
+with c_score2:
     if s.tm:
-        estilo_tm = "class='tm-alert'" if tm_sec <= 10 else ""
-        st.markdown(f"<h1 style='text-align:center;font-size:2.2rem;color:orange;margin:0;' {estilo_tm}>TM {tm_sec}s</h1>",1)
+        st.markdown(f"<h1 style='text-align:center;font-size:2.2rem;color:orange;margin:0;' class='tm-alert'>TM {tm_sec}s</h1>",1)
     else:
         mr_v, sr_v = divmod(int(rem), 60)
         st.markdown(f"<h1 style='text-align:center;font-size:2.8rem;color:red;margin:0;line-height:1;'>{mr_v:02d}:{sr_v:02d}</h1>",1)
@@ -133,23 +127,22 @@ with c2:
                 if j["p"] and j["i"]: d_d = ah-j["i"]; j["tot"]+=d_d; j["tt"]+=d_d; j["i"]=None
         st.rerun()
 
-with c3:
+with c_score3:
     st.metric(s.rv[:8], s.mr)
-    if st.button(f"⚽ GOL {s.rv[:8]}", key="gr_r_dynamic"):
-        s.mr+=1
-        s.gi.append({"team":"RIVAL", "name":s.rv[:8], "m":min_game})
-        st.rerun()
+    if st.button(f"⚽ GOL {s.rv[:8]}", key="gr_r_dyn"):
+        s.mr+=1; s.gi.append({"team":"RIVAL", "name":s.rv[:8], "m":min_game}); st.rerun()
 
+# LINEA DE TIEMPO
 tl_html = '<div style="display:flex; flex-wrap:wrap; gap:2px; justify-content:center; background:#eee; border-radius:4px; padding:2px; margin:4px 0;">'
 for g in s.gi:
     est = "background:#003D7A;color:white;" if g["team"]=="LUD" else "background:white;color:black;border:1px solid #ccc;"
-    label = g["name"][:3]
-    tl_html += f'<span style="font-size:0.6rem; font-weight:bold; padding:1px 3px; border-radius:2px; {est}">{g["m"]}\'{label}</span>'
+    tl_html += f'<span style="font-size:0.6rem; font-weight:bold; padding:1px 3px; border-radius:2px; {est}">{g["m"]}\'{g["name"][:3]}</span>'
 st.markdown(tl_html + '</div>', 1)
 
-cols = st.columns(5)
+# JUGADORES
+cols_js = st.columns(5)
 for idx, j in enumerate(s.js):
-    with cols[idx%5]:
+    with cols_js[idx%5]:
         with st.container(border=True):
             tc = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             mj, vj = divmod(int(tc), 60)
@@ -168,45 +161,46 @@ for idx, j in enumerate(s.js):
                     j["p"], j["i"] = False, None
                 st.rerun()
 
+# FOOTER DE CONTROL ENSANCHADO
 st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
-b1, b2, b3 = st.columns([3.5, 3, 3.5])
+b_f1, b_f2, b_f3 = st.columns([3.5, 3, 3.5])
 
-with b1:
+with b_f1: # LUD
     st.markdown(f"<div class='label-x'>FALTAS LUD: <span class='{'bonus-faltas' if s.fl>=5 else ''}'>{s.fl}</span></div>", 1)
-    c_f, c_tm = st.columns([2, 1])
-    with c_f:
+    col_fl_1, col_fl_2 = st.columns([2, 1])
+    with col_fl_1:
         if st.button("FALTA +", key="flp_big"): s.fl+=1; st.rerun()
         if st.button("FALTA -", key="flm_big"): s.fl=max(0, s.fl-1); st.rerun()
-    with c_tm:
+    with col_fl_2:
         if st.button("TM", key="tm_l_btn"):
             if s.on: s.ta += ah-s.ic; s.on, s.ic = False, None
             s.tm, s.tm_i = True, ah; st.rerun()
-    c_t = st.columns(2)
-    if c_t[0].button(f"🟨 {s.al}", key="tal_l"): s.al+=1; st.rerun()
-    if c_t[1].button(f"🟥 {s.rl}", key="trl_l"): s.rl+=1; st.rerun()
+    col_tl_cards = st.columns(2)
+    if col_tl_cards[0].button(f"🟨 {s.al}", key="tal_l_btn"): s.al+=1; st.rerun()
+    if col_tl_cards[1].button(f"🟥 {s.rl}", key="trl_l_btn"): s.rl+=1; st.rerun()
 
-with b2:
+with b_f2: # TÉCNICO
     st.markdown("<div class='label-x'>TÉCNICO LUD</div>", 1)
-    c_p, c_d = st.columns(2)
-    with c_p:
-        if st.button(f"🧤 {s.pm}", key="pm_b"): s.pm+=1; st.rerun()
-        if st.button(f"👟 {s.pp}", key="pp_b"): s.pp+=1; st.rerun()
-    with c_d:
+    col_tech_1, col_tech_2 = st.columns(2)
+    with col_tech_1:
+        if st.button(f"🧤 {s.pm}", key="pm_b_btn"): s.pm+=1; st.rerun()
+        if st.button(f"👟 {s.pp}", key="pp_b_btn"): s.pp+=1; st.rerun()
+    with col_tech_2:
         td_v = s.dok + s.dko
-        if st.button(f"✅ D: {(s.dok/td_v*100 if td_v>0 else 0):.0f}%", key="dok_b"): s.dok+=1; st.rerun()
-        if st.button(f"❌ D: {s.dko}", key="dko_b"): s.dko+=1; st.rerun()
+        if st.button(f"✅ D: {(s.dok/td_v*100 if td_v>0 else 0):.0f}%", key="dok_b_btn"): s.dok+=1; st.rerun()
+        if st.button(f"❌ D: {s.dko}", key="dko_b_btn"): s.dko+=1; st.rerun()
 
-with b3:
+with b_f3: # RIVAL
     st.markdown(f"<div class='label-x'>FALTAS {s.rv[:8]}: <span class='{'bonus-faltas' if s.fr>=5 else ''}'>{s.fr}</span></div>", 1)
-    c_tmr, c_fr = st.columns([1, 2])
-    with c_tmr:
+    col_fr_1, col_fr_2 = st.columns([1, 2])
+    with col_fr_1:
         if st.button("TM", key="tm_r_btn"):
             if s.on: s.ta += ah-s.ic; s.on, s.ic = False, None
             s.tm, s.tm_i = True, ah; st.rerun()
-    with c_fr:
+    with col_fr_2:
         if st.button("FALTA +", key="frp_big"): s.fr+=1; st.rerun()
         if st.button("FALTA -", key="frm_big"): s.fr=max(0, s.fr-1); st.rerun()
-    c_tr = st.columns(2)
-    if c_tr[0].button(f"🟨 {s.ar}", key="tar_r"): s.ar+=1; st.rerun()
-    if c_tr[1].button(f"🟥 {s.rr}", key="trr_r"): s.rr+=1; st.rerun()
+    col_tr_cards = st.columns(2)
+    if col_tr_cards[0].button(f"🟨 {s.ar}", key="tar_r_btn"): s.ar+=1; st.rerun()
+    if col_tr_cards[1].button(f"🟥 {s.rr}", key="trr_r_btn"): s.rr+=1; st.rerun()
 st.markdown("</div>", unsafe_allow_html=True)
