@@ -4,14 +4,13 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v6.9", layout="wide")
+st.set_page_config(page_title="LUD Match Control v7.1", layout="wide")
 
 st.markdown("""
     <style>
     .block-container {padding-top:0rem; padding-bottom:0rem; padding-left:0.3rem; padding-right:0.3rem;}
     [data-testid="stVerticalBlock"] > div { gap: 0rem !important; }
     
-    /* BOTÓN START/STOP */
     div.stButton > button[key="tm_m"] {
         height: 2.8em !important;
         font-size: 1.1rem !important;
@@ -19,7 +18,6 @@ st.markdown("""
         border: 2px solid #ed1c24 !important;
     }
 
-    /* BOTÓN CAMBIO */
     div.stButton > button[key^="c_"] {
         height: 2.4em !important;
         font-size: 0.9rem !important;
@@ -39,16 +37,7 @@ st.markdown("""
     .header-container { display: flex; align-items: center; justify-content: center; gap: 5px; border-bottom: 2px solid #ed1c24; margin-bottom: 2px; }
     .title {color:#003D7A; font-size:1rem; font-weight:bold; margin:0;}
     .label-x {font-size:0.55rem; font-weight:700; text-align:center; color:#444; text-transform: uppercase;}
-    
-    /* TOTALES MÁS GRANDES Y VISIBLES */
-    .mini-stats { 
-        font-size: 0.9rem !important; 
-        font-weight: 900 !important; 
-        color: #111; 
-        line-height: 1.1; 
-        margin-top: 2px; 
-    }
-    
+    .mini-stats { font-size: 0.9rem !important; font-weight: 900 !important; color: #111; line-height: 1.1; margin-top: 2px; }
     .footer-control { background-color: #f1f3f6; padding: 8px; border-radius: 10px; border: 1px solid #ccd1d9; margin-top: 8px; }
     </style>
     """, unsafe_allow_html=True)
@@ -63,7 +52,7 @@ if 'js' not in st.session_state:
     st.session_state.tm, st.session_state.tm_i = False, None
 
 s = st.session_state
-if not s.ex: st_autorefresh(1000, key="f5_v69")
+if not s.ex: st_autorefresh(1000, key="f5_v71")
 
 ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -94,11 +83,10 @@ if d4.button("🗑️"): st.session_state.clear(); st.rerun()
 c1, c2, c3 = st.columns([2, 4, 2])
 with c1:
     st.metric(f"LUD", s.ml)
-    if st.button("⚽ GOL LUD", key="btn_gol_lud"):
-        with st.popover("¿Quién?", use_container_width=True):
-            for i,j in enumerate(s.js):
-                if st.button(j["n"], key=f"g_l_{i}"):
-                    s.ml+=1; j["g"]+=1; s.gi.append({"team":"LUD", "j":j["n"], "m":min_game}); st.rerun()
+    if st.button("⚽ GOL LUD", key="btn_gol_lud_direct"):
+        s.ml += 1
+        s.gi.append({"team":"LUD", "name":"LUD", "m":min_game})
+        st.rerun()
 
 with c2:
     if s.tm:
@@ -119,15 +107,22 @@ with c2:
 
 with c3:
     st.metric(s.rv[:8], s.mr)
-    if st.button("⚽ GOL RIVAL", key="gr_r"):
-        s.mr+=1; s.gi.append({"team":"RIVAL", "j":"RIV", "m":min_game}); st.rerun()
+    # Botón dinámico con el nombre del rival
+    if st.button(f"⚽ GOL {s.rv[:8]}", key="gr_r_dynamic"):
+        s.mr+=1
+        s.gi.append({"team":"RIVAL", "name":s.rv[:8], "m":min_game})
+        st.rerun()
 
+# LINEA DE TIEMPO DINÁMICA
 tl_html = '<div style="display:flex; flex-wrap:wrap; gap:2px; justify-content:center; background:#eee; border-radius:4px; padding:2px; margin:4px 0;">'
 for g in s.gi:
     est = "background:#003D7A;color:white;" if g["team"]=="LUD" else "background:white;color:black;border:1px solid #ccc;"
-    tl_html += f'<span style="font-size:0.6rem; font-weight:bold; padding:1px 3px; border-radius:2px; {est}">{g["m"]}\'{g["j"][:3]}</span>'
+    # Usamos las 3 primeras letras del nombre registrado para la etiqueta
+    label = g["name"][:3]
+    tl_html += f'<span style="font-size:0.6rem; font-weight:bold; padding:1px 3px; border-radius:2px; {est}">{g["m"]}\'{label}</span>'
 st.markdown(tl_html + '</div>', 1)
 
+# JUGADORES (Resto igual para no romper sintonía)
 cols = st.columns(5)
 for idx, j in enumerate(s.js):
     with cols[idx%5]:
@@ -139,7 +134,6 @@ for idx, j in enumerate(s.js):
             fat = "<span class='blink tm-alert'>⚠️</span>" if mj >= 5 else ""
             st.markdown(f"<p style='margin:0;font-size:0.7rem;'>{'🟢' if j['p'] else '🔴'} <b>{j['n']}</b> <span style='float:right; font-weight:900;'>R:{j['r']}</span></p>", 1)
             st.markdown(f"<h4 style='margin:0;text-align:center;font-size:1.1rem;'>{mj:02d}:{vj:02d} {fat}</h4>", 1)
-            # SECCIÓN DE TOTALES MÁS GRANDE
             st.markdown(f"<div class='mini-stats' style='display:flex;justify-content:space-between;'><span>⚽ {j['g']}</span><span>Σ {mt:02d}:{vt:02d}</span></div>", 1)
             if st.button("CAMBIO", key=f"c_{idx}", use_container_width=True):
                 if not j["p"] and sum(1 for x in s.js if x["p"])<5:
@@ -150,6 +144,7 @@ for idx, j in enumerate(s.js):
                     j["p"], j["i"] = False, None
                 st.rerun()
 
+# FOOTER (Faltas dinámicas también)
 st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
 b1, b2, b3 = st.columns([3, 4, 3])
 with b1:
@@ -177,7 +172,7 @@ with b2:
         if dx1.button(f"✅{s.dok}"): s.dok+=1; st.rerun()
         if dx2.button(f"❌{s.dko}"): s.dko+=1; st.rerun()
 with b3:
-    st.markdown(f"<div class='label-x'>FALTAS RIVAL: <span class='{'bonus-faltas' if s.fr>=5 else ''}'>{s.fr}</span></div>", 1)
+    st.markdown(f"<div class='label-x'>FALTAS {s.rv[:8]}: <span class='{'bonus-faltas' if s.fr>=5 else ''}'>{s.fr}</span></div>", 1)
     cf1_r, cf2_r, ctm_r = st.columns(3)
     if cf1_r.button("F+", key="frp"): s.fr+=1; st.rerun()
     if cf2_r.button("F-", key="frm"): s.fr=max(0, s.fr-1); st.rerun()
