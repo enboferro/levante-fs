@@ -4,9 +4,9 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v11.8", layout="wide")
+st.set_page_config(page_title="LUD Match Control v11.9", layout="wide")
 
-# --- CSS MEJORADO: SIMETRÍA Y COLORES INTENSOS ---
+# --- CSS MEJORADO: BOTÓN MASTER Y SIMETRÍA TOTAL ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;700;900&display=swap');
@@ -15,20 +15,45 @@ st.markdown("""
     .block-container { padding: 0.1rem !important; max-width: 100% !important; }
     [data-testid="stVerticalBlock"] > div { gap: 0rem !important; }
 
+    /* CONTENEDOR MARCADOR GIGANTE */
     .scoreboard-container {
         display: flex; align-items: center; justify-content: space-around;
         background: #001f3f; padding: 5px; border-radius: 0 0 15px 15px;
         color: #ffffff; box-shadow: 0 6px 15px rgba(0,0,0,0.4);
         border-bottom: 4px solid #ff0000;
+        margin-bottom: 5px;
     }
     .score-number { font-size: 5rem !important; font-weight: 900; line-height: 1; font-family: 'Roboto Mono', monospace; color: #00f2ff; }
     .score-label { font-size: 0.9rem; font-weight: 900; text-transform: uppercase; color: #ffcc00; }
+    .stadium-clock { font-family: 'Roboto Mono', monospace; font-size: 4.5rem !important; font-weight: 700; color: #ffffff; line-height: 0.8; text-align: center; }
 
-    .stadium-clock {
-        font-family: 'Roboto Mono', monospace;
-        font-size: 4.5rem !important;
-        font-weight: 700; color: #ffffff;
-        line-height: 0.8; text-align: center;
+    /* BOTÓN MASTER START/STOP: ANCHO TOTAL Y SENSIBILIDAD */
+    div.stButton > button[key="tm_m"] {
+        width: 100% !important;
+        height: 65px !important; /* Más alto para mayor comodidad */
+        background-color: #ffffff !important;
+        color: #001f3f !important;
+        border: 4px solid #ed1c24 !important;
+        border-radius: 12px !important;
+        font-size: 1.6rem !important;
+        font-weight: 900 !important;
+        margin: 0 auto !important;
+        display: block !important;
+        box-shadow: 0 6px 0 #cc0000 !important;
+        transition: all 0.05s ease-in-out !important; /* Sensibilidad máxima */
+    }
+    div.stButton > button[key="tm_m"]:active {
+        transform: translateY(4px) !important;
+        box-shadow: 0 2px 0 #cc0000 !important;
+        background-color: #f0f0f0 !important;
+    }
+
+    /* BOTONES DE GOL ALINEADOS */
+    div.stButton > button[key^="btn_g_"] {
+        height: 45px !important;
+        font-weight: 900 !important;
+        font-size: 1rem !important;
+        border-radius: 10px !important;
     }
 
     /* SEMÁFORO DE ROTACIÓN */
@@ -39,17 +64,9 @@ st.markdown("""
 
     @keyframes blinker { 50% { opacity: 0.4; } }
 
-    div.stButton > button[key="tm_m"] {
-        width: 100% !important; max-width: 300px !important;
-        height: 42px !important; background-color: #ffffff !important;
-        color: #001f3f !important; border: 3px solid #ff0000 !important;
-        border-radius: 12px !important; font-size: 1.2rem !important;
-        font-weight: 900 !important; margin: 5px auto !important; display: block !important;
-    }
-
     .horizontal-timeline {
         display: flex; overflow-x: auto; background: #222;
-        padding: 3px; border-radius: 5px; margin: 3px 0;
+        padding: 3px; border-radius: 5px; margin: 4px 0;
         border: 2px solid #001f3f; gap: 4px; height: 32px;
     }
 
@@ -61,7 +78,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN ---
+# --- ESTADO DE SESIÓN ---
 if 'js' not in st.session_state:
     n = ["Serra","Julian","Omar","Tony","Rochina","Benages","Pedrito","Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Jose","Coque","Nacho Gomez"]
     st.session_state.update({
@@ -72,7 +89,7 @@ if 'js' not in st.session_state:
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v11.8")
+st_autorefresh(1000, key="f5_lud_v11.9")
 
 ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -94,7 +111,7 @@ def stop_match():
             if j["p"] and j["i"]:
                 d = now - j["i"]; j["tot"] += d; j["tt"] += d; j["i"] = None
 
-# --- MARCADOR ---
+# --- BLOQUE SUPERIOR: MARCADOR GIGANTE ---
 mv, sv = divmod(int(rem), 60)
 timer_display = f"{tm_sec}s" if s.tm else f"{mv:02d}:{sv:02d}"
 
@@ -106,13 +123,15 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# ACCIONES RÁPIDAS
-c_act = st.columns([1, 2, 1])
-with c_act[0]:
+# --- PANEL DE CONTROL CENTRAL (SIMETRÍA TOTAL) ---
+c_panel = st.columns([1, 2, 1])
+
+with c_panel[0]: # BOTÓN GOL LUD
     with st.popover("⚽ GOL LUD", use_container_width=True):
         p_gol = st.selectbox("Autor", [j['n'] for j in s.js], key="gl")
-        if st.button("GOOOL!"): s.ml+=1; s.eventos.append({'min':min_act,'info':f'⚽{p_gol}'}); st.rerun()
-with c_act[1]:
+        if st.button("GOOOL!", key="btn_g_l"): s.ml+=1; s.eventos.append({'min':min_act,'info':f'⚽{p_gol}'}); st.rerun()
+
+with c_panel[1]: # BOTÓN MASTER START/STOP
     if st.button("▶ START / STOP ⏸", key="tm_m"):
         if not s.on:
             s.ic, s.on, s.tm = ah, True, False
@@ -120,27 +139,30 @@ with c_act[1]:
                 if j["p"]: j["i"]=ah
         else: stop_match()
         st.rerun()
-with c_act[2]:
+
+with c_panel[2]: # BOTÓN GOL RIVAL
     with st.popover("⚽ GOL RIVAL", use_container_width=True):
         d_gol = st.number_input("Dorsal", 1, 99, key="gr")
-        if st.button("CONFIRMAR"): s.mr+=1; s.eventos.append({'min':min_act,'info':f'⚽#{d_gol}'}); st.rerun()
+        if st.button("CONFIRMAR", key="btn_g_r"): s.mr+=1; s.eventos.append({'min':min_act,'info':f'⚽#{d_gol}'}); st.rerun()
 
-# EVENTOS
+# --- LÍNEA DE EVENTOS Y CONFIG ---
 if s.eventos:
     tl = "".join([f"<span style='background:#ffcc00;color:#000;padding:2px 5px;border-radius:3px;font-size:0.7rem;margin-right:3px;font-weight:900;'>{e['min']}' {e['info']}</span>" for e in s.eventos])
     st.markdown(f"<div class='horizontal-timeline'>{tl}</div>", unsafe_allow_html=True)
 
-# JUGADORES
+c_cfg = st.columns([2, 1, 1])
+with c_cfg[0]: s.rv = st.text_input("Rival", s.rv, label_visibility="collapsed").upper()
+with c_cfg[1]: s.pa = st.selectbox("", ["1T","2T"], index=0 if s.pa=="1T" else 1, label_visibility="collapsed")
+with c_cfg[2]: st.button("🗑️ RESET", use_container_width=True, on_click=lambda: st.session_state.clear())
+
+# --- JUGADORES ---
 st.markdown("<div style='margin-bottom:2px;'></div>", unsafe_allow_html=True)
 cols = st.columns(6)
 for i, j in enumerate(s.js):
     with cols[i%6]:
         cur_sec = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
         tot_sec = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-        if not j['p']: cl = "banquillo"
-        elif cur_sec < 240: cl = "pista-verde"
-        elif cur_sec < 360: cl = "pista-naranja"
-        else: cl = "pista-roja"
+        cl = "banquillo" if not j['p'] else ("pista-verde" if cur_sec < 240 else ("pista-naranja" if cur_sec < 360 else "pista-roja"))
         st.markdown(f"<div class='{cl}'>", unsafe_allow_html=True)
         mc, vc = divmod(int(cur_sec), 60); mt, vt = divmod(int(tot_sec), 60)
         st.markdown(f"<div style='font-size:0.85rem; line-height:1;'>{j['n']}</div><div style='font-size:1.3rem; line-height:1;'>{mc:02d}:{vc:02d}</div><div style='font-size:0.7rem;'>Σ{mt:02d}:{vt:02d} R:{j['r']}</div>", 1)
@@ -153,7 +175,7 @@ for i, j in enumerate(s.js):
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-# FOOTER SIMÉTRICO
+# --- FOOTER ---
 st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
 f1, f2, f3 = st.columns([2.5, 3, 2.5])
 with f1:
@@ -161,7 +183,7 @@ with f1:
     st.button("FALTA +", key="flud", use_container_width=True, on_click=lambda: setattr(s, 'fl', s.fl+1))
     if st.button("⏱️ TM LUD"): stop_match(); s.tm, s.tm_i = True, time.time(); st.rerun()
 with f2:
-    # FILA 1: TARJETAS
+    # Tarjetas y Portería
     c_t1, c_t2 = st.columns(2)
     with c_t1:
         with st.popover(f"🟨 {s.al}", use_container_width=True):
@@ -177,7 +199,6 @@ with f2:
         with st.popover(f"🟥 {s.rr}", use_container_width=True):
             d_r = st.number_input("Dorsal", 1, 99, key="rriv")
             if st.button("R-RIV"): s.rr+=1; s.eventos.append({'min':min_act,'info':f'🟥#{d_r}'}); st.rerun()
-    # FILA 2: PORTERÍA UNIFICADA Y SIMÉTRICA
     c_p1, c_p2 = st.columns(2)
     c_p1.button(f"🧤 {s.pm}", use_container_width=True, on_click=lambda: setattr(s, 'pm', s.pm+1))
     c_p2.button(f"👟 {s.pp}", use_container_width=True, on_click=lambda: setattr(s, 'pp', s.pp+1))
