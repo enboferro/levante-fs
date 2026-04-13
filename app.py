@@ -4,7 +4,7 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v7.4", layout="wide")
+st.set_page_config(page_title="LUD Match Control v7.5", layout="wide")
 
 st.markdown("""
     <style>
@@ -14,12 +14,12 @@ st.markdown("""
     /* SENSIBILIDAD MÁXIMA Y BOTONES ANCHOS */
     div.stButton > button {
         border-radius: 6px;
-        height: 2.5em; /* Botones más altos y fáciles de tocar */
+        height: 2.8em; /* Un poco más altos para el footer */
         width: 100%;
-        font-size: 0.9rem !important;
+        font-size: 0.95rem !important;
         font-weight: 800 !important;
         padding: 0px !important;
-        transition: transform 0.05s ease-in-out !important; /* Respuesta casi instantánea */
+        transition: transform 0.05s ease-in-out !important;
     }
 
     div.stButton > button:active {
@@ -44,7 +44,7 @@ st.markdown("""
         border: 1px solid #bfc4cd !important;
     }
 
-    /* FALTAS Y TÉCNICO (Colores para diferenciar rápido) */
+    /* COLORES FOOTER */
     div.stButton > button[key*="p_big"] { background-color: #e8f5e9 !important; border: 1px solid #28a745 !important; }
     div.stButton > button[key*="m_big"] { background-color: #ffebee !important; border: 1px solid #dc3545 !important; }
     div.stButton > button[key^="tm_"] { background-color: #fff3e0 !important; border: 1px solid #ff9800 !important; }
@@ -59,7 +59,6 @@ st.markdown("""
     .label-x {font-size:0.65rem; font-weight:800; text-align:center; color:#222; text-transform: uppercase; margin-bottom: 3px; background: #ddd; border-radius: 3px;}
     .mini-stats { font-size: 0.9rem !important; font-weight: 900 !important; color: #111; line-height: 1.1; margin-top: 2px; }
     
-    /* CONTENEDOR INFERIOR */
     .footer-control { background-color: #ffffff; padding: 12px; border-radius: 12px; border: 2px solid #003D7A; margin-top: 10px; }
     </style>
     """, unsafe_allow_html=True)
@@ -87,7 +86,6 @@ if s.tm:
     tm_sec = max(0, 60 - int(elapsed))
     if tm_sec == 0: s.tm = False
 
-# CABECERA
 st.markdown(f'<div class="header-container"><img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png" width="25"><h1 class="title">LUD MATCH CONTROL</h1></div>', unsafe_allow_html=True)
 
 d_top1, d_top2, d_top3, d_top4 = st.columns([1.5, 1, 1, 0.5])
@@ -103,7 +101,6 @@ with d_top3:
                 st.rerun()
 if d_top4.button("🗑️", key="main_reset_btn", use_container_width=True): st.session_state.clear(); st.rerun()
 
-# MARCADOR
 c_score1, c_score2, c_score3 = st.columns([2, 4, 2])
 with c_score1:
     st.metric(f"LUD", s.ml)
@@ -132,14 +129,12 @@ with c_score3:
     if st.button(f"⚽ GOL {s.rv[:8]}", key="gr_r_dyn"):
         s.mr+=1; s.gi.append({"team":"RIVAL", "name":s.rv[:8], "m":min_game}); st.rerun()
 
-# LINEA DE TIEMPO
 tl_html = '<div style="display:flex; flex-wrap:wrap; gap:2px; justify-content:center; background:#eee; border-radius:4px; padding:2px; margin:4px 0;">'
 for g in s.gi:
     est = "background:#003D7A;color:white;" if g["team"]=="LUD" else "background:white;color:black;border:1px solid #ccc;"
     tl_html += f'<span style="font-size:0.6rem; font-weight:bold; padding:1px 3px; border-radius:2px; {est}">{g["m"]}\'{g["name"][:3]}</span>'
 st.markdown(tl_html + '</div>', 1)
 
-# JUGADORES
 cols_js = st.columns(5)
 for idx, j in enumerate(s.js):
     with cols_js[idx%5]:
@@ -161,45 +156,37 @@ for idx, j in enumerate(s.js):
                     j["p"], j["i"] = False, None
                 st.rerun()
 
-# FOOTER DE CONTROL ENSANCHADO
 st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
 b_f1, b_f2, b_f3 = st.columns([3.5, 3, 3.5])
 
 with b_f1: # LUD
     st.markdown(f"<div class='label-x'>FALTAS LUD: <span class='{'bonus-faltas' if s.fl>=5 else ''}'>{s.fl}</span></div>", 1)
-    col_fl_1, col_fl_2 = st.columns([2, 1])
-    with col_fl_1:
-        if st.button("FALTA +", key="flp_big"): s.fl+=1; st.rerun()
-        if st.button("FALTA -", key="flm_big"): s.fl=max(0, s.fl-1); st.rerun()
-    with col_fl_2:
-        if st.button("TM", key="tm_l_btn"):
-            if s.on: s.ta += ah-s.ic; s.on, s.ic = False, None
-            s.tm, s.tm_i = True, ah; st.rerun()
+    if st.button("FALTA +", key="flp_big"): s.fl+=1; st.rerun()
+    col_l_bot = st.columns([1.5, 1])
+    if col_l_bot[0].button("FALTA -", key="flm_big"): s.fl=max(0, s.fl-1); st.rerun()
+    if col_l_bot[1].button("TM", key="tm_l_btn"):
+        if s.on: s.ta += ah-s.ic; s.on, s.ic = False, None
+        s.tm, s.tm_i = True, ah; st.rerun()
     col_tl_cards = st.columns(2)
     if col_tl_cards[0].button(f"🟨 {s.al}", key="tal_l_btn"): s.al+=1; st.rerun()
     if col_tl_cards[1].button(f"🟥 {s.rl}", key="trl_l_btn"): s.rl+=1; st.rerun()
 
 with b_f2: # TÉCNICO
     st.markdown("<div class='label-x'>TÉCNICO LUD</div>", 1)
-    col_tech_1, col_tech_2 = st.columns(2)
-    with col_tech_1:
-        if st.button(f"🧤 {s.pm}", key="pm_b_btn"): s.pm+=1; st.rerun()
-        if st.button(f"👟 {s.pp}", key="pp_b_btn"): s.pp+=1; st.rerun()
-    with col_tech_2:
-        td_v = s.dok + s.dko
-        if st.button(f"✅ D: {(s.dok/td_v*100 if td_v>0 else 0):.0f}%", key="dok_b_btn"): s.dok+=1; st.rerun()
-        if st.button(f"❌ D: {s.dko}", key="dko_b_btn"): s.dko+=1; st.rerun()
+    if st.button(f"🧤 Portero: {s.pm}", key="pm_b_btn"): s.pm+=1; st.rerun()
+    if st.button(f"👟 Pie: {s.pp}", key="pp_b_btn"): s.pp+=1; st.rerun()
+    td_v = s.dok + s.dko
+    if st.button(f"✅ D: {(s.dok/td_v*100 if td_v>0 else 0):.0f}%", key="dok_b_btn"): s.dok+=1; st.rerun()
+    if st.button(f"❌ Duelos: {s.dko}", key="dko_b_btn"): s.dko+=1; st.rerun()
 
 with b_f3: # RIVAL
     st.markdown(f"<div class='label-x'>FALTAS {s.rv[:8]}: <span class='{'bonus-faltas' if s.fr>=5 else ''}'>{s.fr}</span></div>", 1)
-    col_fr_1, col_fr_2 = st.columns([1, 2])
-    with col_fr_1:
-        if st.button("TM", key="tm_r_btn"):
-            if s.on: s.ta += ah-s.ic; s.on, s.ic = False, None
-            s.tm, s.tm_i = True, ah; st.rerun()
-    with col_fr_2:
-        if st.button("FALTA +", key="frp_big"): s.fr+=1; st.rerun()
-        if st.button("FALTA -", key="frm_big"): s.fr=max(0, s.fr-1); st.rerun()
+    if st.button("FALTA +", key="frp_big"): s.fr+=1; st.rerun()
+    col_r_bot = st.columns([1, 1.5])
+    if col_r_bot[0].button("TM", key="tm_r_btn"):
+        if s.on: s.ta += ah-s.ic; s.on, s.ic = False, None
+        s.tm, s.tm_i = True, ah; st.rerun()
+    if col_r_bot[1].button("FALTA -", key="frm_big"): s.fr=max(0, s.fr-1); st.rerun()
     col_tr_cards = st.columns(2)
     if col_tr_cards[0].button(f"🟨 {s.ar}", key="tar_r_btn"): s.ar+=1; st.rerun()
     if col_tr_cards[1].button(f"🟥 {s.rr}", key="trr_r_btn"): s.rr+=1; st.rerun()
