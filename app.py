@@ -4,9 +4,9 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Master Control v17.0", layout="wide")
+st.set_page_config(page_title="LUD Master Control v18.0", layout="wide")
 
-# --- CSS RADICAL (Inspirado en v14.0 con ajustes de simetría) ---
+# --- CSS RADICAL (v14/v17 Style) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;700;900&display=swap');
@@ -14,7 +14,6 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Roboto', sans-serif; background-color: #e0e0e0; overflow-x: hidden; }
     .block-container { padding: 0.1rem !important; max-width: 100% !important; }
 
-    /* MARCADOR SUPERIOR INTEGRADO */
     .scoreboard-container {
         display: flex; align-items: center; justify-content: space-around;
         background: #001f3f; padding: 5px; border-radius: 0 0 15px 15px;
@@ -31,7 +30,6 @@ st.markdown("""
         line-height: 0.8; text-align: center;
     }
 
-    /* TRIPLE BOTÓN IDÉNTICO */
     div.stButton > button[key^="tm_"] {
         width: 100% !important;
         height: 80px !important; 
@@ -49,19 +47,22 @@ st.markdown("""
         box-shadow: 0 2px 0 #cc0000 !important;
     }
 
-    /* SEMÁFORO DE JUGADORES (v14 Intensity) */
+    /* ESTILOS LÍNEA DE TIEMPO */
+    .horizontal-timeline {
+        display: flex; overflow-x: auto; background: #222;
+        padding: 5px; border-radius: 5px; margin: 4px 0;
+        border: 2px solid #001f3f; gap: 6px; height: 40px;
+        align-items: center;
+    }
+    .badge-lud { background: #ffcc00; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 900; white-space: nowrap; }
+    .badge-riv { background: #ff007f; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 900; white-space: nowrap; border: 1px solid white; }
+
     .pista-verde { background-color: #00FF41 !important; color: #000 !important; border-radius: 8px; padding: 2px; text-align: center; font-weight: 900; }
     .pista-naranja { background-color: #FF5E00 !important; color: white !important; border-radius: 8px; padding: 2px; text-align: center; font-weight: 900; border: 1px solid white; }
     .pista-roja { background-color: #FF0000 !important; color: white !important; border-radius: 8px; padding: 2px; text-align: center; font-weight: 900; border: 2px solid #FFFF00; animation: blinker 0.8s linear infinite; }
     .banquillo { background-color: #333333 !important; color: #aaaaaa !important; border-radius: 8px; padding: 2px; text-align: center; opacity: 0.9; }
 
     @keyframes blinker { 50% { opacity: 0.4; } }
-
-    .horizontal-timeline {
-        display: flex; overflow-x: auto; background: #222;
-        padding: 3px; border-radius: 5px; margin: 4px 0;
-        border: 2px solid #001f3f; gap: 4px; height: 35px;
-    }
 
     .footer-control {
         background-color: #ffffff; padding: 4px;
@@ -82,19 +83,12 @@ if 'js' not in st.session_state:
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v17")
+st_autorefresh(1000, key="f5_lud_v18")
 
 ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr)
 min_act = int((tr if s.pa=="1T" else tr+1200) // 60)
-
-if s.on:
-    if s.pa == "1T": s.t1_abs = tr
-    else: s.t2_abs = tr
-
-tm_sec = max(0, 60 - int(ah - s.tm_i)) if s.tm and s.tm_i else 0
-if s.tm and tm_sec == 0: s.tm = False
 
 def toggle_timer():
     if not s.on:
@@ -109,8 +103,9 @@ def toggle_timer():
             if j["p"] and j["i"]:
                 d = now - j["i"]; j["tot"] += d; j["tt"] += d; j["i"] = None
 
-# --- MARCADOR SUPERIOR CON FALTAS Y TARJETAS ---
+# --- UI ---
 mv, sv = divmod(int(rem), 60)
+tm_sec = max(0, 60 - int(ah - s.tm_i)) if s.tm and s.tm_i else 0
 timer_display = f"{tm_sec}s" if s.tm else f"{mv:02d}:{sv:02d}"
 
 st.markdown(f"""
@@ -129,18 +124,22 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# --- TRIPLE BOTÓN START/STOP IDÉNTICO ---
+# Triple Botón
 c_bt = st.columns([1, 1, 1])
 for i, col in enumerate(["tm_l", "tm_m", "tm_r"]):
-    if c_bt[i].button("▶ START / STOP ⏸", key=col):
-        toggle_timer(); st.rerun()
+    if c_bt[i].button("▶ START / STOP ⏸", key=col): toggle_timer(); st.rerun()
 
-# --- LÍNEA DE EVENTOS ---
+# --- LÍNEA DE TIEMPO CON COLORES DISTINGUIDOS ---
 if s.eventos:
-    tl = "".join([f"<span style='background:#ffcc00;color:#000;padding:2px 5px;border-radius:3px;font-size:0.75rem;margin-right:3px;font-weight:900;'>{e['min']}' {e['info']}</span>" for e in s.eventos])
-    st.markdown(f"<div class='horizontal-timeline'>{tl}</div>", unsafe_allow_html=True)
+    tl_html = ""
+    for e in s.eventos:
+        # Si la info contiene '#' o termina en 'RIV', es del rival
+        is_riv = '#' in e['info'] or 'RIV' in e['info']
+        cl_badge = "badge-riv" if is_riv else "badge-lud"
+        tl_html += f"<span class='{cl_badge}'>{e['min']}' {e['info']}</span>"
+    st.markdown(f"<div class='horizontal-timeline'>{tl_html}</div>", unsafe_allow_html=True)
 
-# --- GOLES Y CONFIG ---
+# Goles y Config
 c_act = st.columns([1, 1, 1, 1])
 with c_act[0]:
     with st.popover("⚽ GOL LUD", use_container_width=True):
@@ -150,13 +149,11 @@ with c_act[1]:
     with st.popover("⚽ GOL RIVAL", use_container_width=True):
         d_gol = st.number_input("Dorsal", 1, 99, key="gr")
         if st.button("GOL RIVAL"): s.mr+=1; s.eventos.append({'min':min_act,'info':f'⚽#{d_gol}'}); st.rerun()
-with c_act[2]:
-    s.rv = st.text_input("Rival", s.rv, label_visibility="collapsed").upper()
-with c_act[3]:
+with c_act[2]: s.rv = st.text_input("Rival", s.rv, label_visibility="collapsed").upper()
+with c_act[3]: 
     if st.button("🗑️ RESET"): st.session_state.clear(); st.rerun()
 
-# --- JUGADORES ---
-st.markdown("<div style='margin-bottom:2px;'></div>", unsafe_allow_html=True)
+# Jugadores
 cols = st.columns(6)
 for i, j in enumerate(s.js):
     with cols[i%6]:
@@ -175,29 +172,29 @@ for i, j in enumerate(s.js):
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-# --- FOOTER ---
+# Footer
 st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
 f1, f2, f3 = st.columns([2.5, 3, 2.5])
 with f1: # LUD
     st.button("❌ LUD F+", key="flp", use_container_width=True, on_click=lambda: setattr(s, 'fl', s.fl+1))
     st.button("LUD F-", key="flm", use_container_width=True, on_click=lambda: setattr(s, 'fl', max(0, s.fl-1)))
     if st.button("⏱️ TM LUD"): toggle_timer(); s.tm, s.tm_i = True, time.time(); st.rerun()
-with f2: # TARJETAS E ICONOS
+with f2: # Tarjetas
     c_t1, c_t2 = st.columns(2)
-    with c_t1: # LUD Tarjetas
+    with c_t1: # LUD
         with st.popover("🟨", use_container_width=True):
             p_a = st.selectbox("J", [j['n'] for j in s.js], key="alud")
             if st.button("OK 🟨 LUD"): s.al+=1; s.eventos.append({'min':min_act,'info':f'🟨{p_a}'}); st.rerun()
         with st.popover("🟥", use_container_width=True):
             p_r = st.selectbox("J", [j['n'] for j in s.js], key="rlud")
             if st.button("OK 🟥 LUD"): s.rl+=1; s.eventos.append({'min':min_act,'info':f'🟥{p_r}'}); st.rerun()
-    with c_t2: # RIV Tarjetas
+    with c_t2: # RIV
         with st.popover("🟨", use_container_width=True):
             d_a = st.number_input("D", 1, 99, key="ariv")
-            if st.button("OK 🟨 RIV"): s.ar+=1; s.eventos.append({'min':min_act,'info':f'🟨#{d_a}'}); st.rerun()
+            if st.button("OK 🟨 RIV"): s.ar+=1; s.eventos.append({'min':min_act,'info':f'🟨#{d_a} RIV'}); st.rerun()
         with st.popover("🟥", use_container_width=True):
             d_r = st.number_input("D", 1, 99, key="rriv")
-            if st.button("OK 🟥 RIV"): s.rr+=1; s.eventos.append({'min':min_act,'info':f'🟥#{d_r}'}); st.rerun()
+            if st.button("OK 🟥 RIV"): s.rr+=1; s.eventos.append({'min':min_act,'info':f'🟥#{d_r} RIV'}); st.rerun()
     c_p1, c_p2 = st.columns(2)
     c_p1.button(f"🧤 {s.pm}", use_container_width=True, on_click=lambda: setattr(s, 'pm', s.pm+1))
     c_p2.button(f"👟 {s.pp}", use_container_width=True, on_click=lambda: setattr(s, 'pp', s.pp+1))
