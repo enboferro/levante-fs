@@ -4,7 +4,7 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v6.2", layout="wide")
+st.set_page_config(page_title="LUD Match Control v6.3", layout="wide")
 
 st.markdown("""
     <style>
@@ -19,6 +19,30 @@ st.markdown("""
     .perc-bold {font-weight: 800; color: #000; font-size: 0.75rem;}
     .mini-stats { font-size: 0.8rem; font-weight: 700; color: #333; line-height: 1.2; margin-top: 3px; }
     .rot-bold { font-weight: 800; color: #555; font-size: 0.8rem; }
+    
+    /* Estilo Línea de Tiempo */
+    .timeline-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 5px;
+        background: #f0f2f6;
+        padding: 5px;
+        border-radius: 8px;
+        margin-top: 5px;
+        min-height: 35px;
+        align-items: center;
+    }
+    .goal-tag {
+        font-size: 0.75rem;
+        font-weight: bold;
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+    .lud-goal { background-color: #003D7A; color: white; }
+    .riv-goal { background-color: #ffffff; color: #333; }
+    
     hr { margin: 0.4rem 0px !important; }
     button[key*="dok_btn"] { background-color: #e8f5e9 !important; border: 1px solid #28a745 !important; }
     button[key*="dko_btn"] { background-color: #ffebee !important; border: 1px solid #dc3545 !important; }
@@ -35,19 +59,19 @@ if 'js' not in st.session_state:
     st.session_state.hist = {}
 
 s = st.session_state
-if not s.ex: st_autorefresh(1000, key="f5_v62")
+if not s.ex: st_autorefresh(1000, key="f5_v63")
 
 ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr)
-mp, sp = divmod(int(tr if s.pa=="1T" else tr+1200), 60)
+# Minuto actual del partido para el registro
+min_game = int((tr if s.pa=="1T" else tr+1200) // 60)
 
 st.markdown(f'<div class="header-container"><img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png" width="35"><h1 class="title">MATCH CONTROL</h1></div>', unsafe_allow_html=True)
 
 d1, d2, d3, d4 = st.columns([1.5, 1, 1, 0.8])
 s.rv = d1.text_input("RIVAL", s.rv, key="irv", label_visibility="collapsed").upper()
 s.fe = d2.text_input("FECHA", s.fe, key="ife", label_visibility="collapsed")
-
 with d3:
     with st.popover("5 INICIAL", use_container_width=True):
         st.write("Selecciona 5 jugadores:")
@@ -55,16 +79,12 @@ with d3:
         for j in s.js:
             label = f"{'✅' if j['p'] else '⬜'} {j['n']}"
             if st.button(label, key=f"init_{j['n']}", use_container_width=True):
-                if j["p"]: # Desmarcar
-                    j["p"], j["i"], j["r"] = False, None, 0
-                elif cant_p < 5: # Marcar si hay sitio
-                    j["p"], j["r"] = True, 1
-                    j["i"] = ah if s.on else None
+                if j["p"]: j["p"], j["i"], j["r"] = False, None, 0
+                elif cant_p < 5: j["p"], j["r"] = True, 1; j["i"] = ah if s.on else None
                 st.rerun()
-
 if d4.button("🗑️ RESET"): st.session_state.clear(); st.rerun()
 
-c1, c2, c3 = st.columns([3.2, 2.2, 3.2])
+c1, c2, c3 = st.columns([3.2, 2.5, 3.2])
 with c1:
     st.metric(f"LUD | ⚽ {s.ml} | ❌ {s.fl}", s.ml)
     cg, cf1, cf2 = st.columns([1.4, 0.8, 0.8])
@@ -72,7 +92,7 @@ with c1:
         with st.popover("⚽ GOL", use_container_width=True):
             for i,j in enumerate(s.js):
                 if st.button(j["n"], key=f"gp_lud_{i}"):
-                    s.ml+=1; j["g"]+=1; s.gi.append({"j":j["n"],"m":f"{mp:02d}:{sp:02d}"}); st.rerun()
+                    s.ml+=1; j["g"]+=1; s.gi.append({"team":"LUD", "j":j["n"], "m":min_game}); st.rerun()
     if cf1.button("F+", key="flp"): s.fl+=1; st.rerun()
     if cf2.button("F-", key="flm"): s.fl=max(0, s.fl-1); st.rerun()
     t1, t2 = st.columns(2)
@@ -105,12 +125,21 @@ with c2:
             for j in s.js:
                 if j["p"] and j["i"]: d_d = ah-j["i"]; j["tot"]+=d_d; j["tt"]+=d_d; j["i"]=None
         st.rerun()
-    for g in s.gi[-1:]: st.markdown(f"<p style='font-size:0.75rem;margin:0;text-align:center;'><b>{g['m']}</b> {g['j']}</p>", 1)
+    
+    # LINEA DE TIEMPO DE GOLES
+    timeline_html = '<div class="timeline-container">'
+    if not s.gi:
+        timeline_html += '<span style="color:#999; font-size:0.7rem;">Esperando goles...</span>'
+    for g in s.gi:
+        clase = "lud-goal" if g["team"] == "LUD" else "riv-goal"
+        timeline_html += f'<span class="goal-tag {clase}">{g["m"]}\' {g["j"][:3]}.</span>'
+    timeline_html += '</div>'
+    st.markdown(timeline_html, unsafe_allow_html=True)
 
 with c3:
     st.metric(f"{s.rv[:8]} | ⚽ {s.mr} | ❌ {s.fr}", s.mr)
     cg_r, cf1_r, cf2_r = st.columns([1.4, 0.8, 0.8])
-    if cg_r.button("⚽ GOL", key="gr_r"): s.mr+=1; s.gi.append({"j":s.rv,"m":f"{mp:02d}:{sp:02d}"}); st.rerun()
+    if cg_r.button("⚽ GOL", key="gr_r"): s.mr+=1; s.gi.append({"team":"RIVAL", "j":"RIV", "m":min_game}); st.rerun()
     if cf1_r.button("F+", key="frp"): s.fr+=1; st.rerun()
     if cf2_r.button("F-", key="frm"): s.fr=max(0, s.fr-1); st.rerun()
     tr1, tr2 = st.columns(2)
