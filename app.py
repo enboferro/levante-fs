@@ -4,9 +4,9 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Master Control v19.0", layout="wide")
+st.set_page_config(page_title="LUD Match Control v20.1", layout="wide")
 
-# --- CSS DE ALTO CONTRASTE (Marrón vs Negro) ---
+# --- CSS DE ALTO CONTRASTE ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;700;900&display=swap');
@@ -14,11 +14,9 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Roboto', sans-serif; background-color: #e0e0e0; overflow-x: hidden; }
     .block-container { padding: 0.1rem !important; max-width: 100% !important; }
 
-    /* MARCADOR CON NUEVOS COLORES */
     .scoreboard-container {
         display: flex; align-items: center; justify-content: space-around;
-        background: #4B2E2A; /* Marrón profundo LUD */
-        padding: 5px; border-radius: 0 0 15px 15px;
+        background: #4B2E2A; padding: 5px; border-radius: 0 0 15px 15px;
         color: #ffffff; box-shadow: 0 6px 15px rgba(0,0,0,0.4);
         border-bottom: 4px solid #000000;
     }
@@ -32,7 +30,6 @@ st.markdown("""
         line-height: 0.8; text-align: center;
     }
 
-    /* TRIPLE BOTÓN START/STOP */
     div.stButton > button[key^="tm_"] {
         width: 100% !important; height: 80px !important; 
         background-color: #ffffff !important;
@@ -43,12 +40,8 @@ st.markdown("""
         box-shadow: 0 8px 0 #333333 !important;
         transition: all 0.05s ease-in-out !important;
     }
-    div.stButton > button[key^="tm_"]:active {
-        transform: translateY(4px) !important;
-        box-shadow: 0 2px 0 #333333 !important;
-    }
+    div.stButton > button[key^="tm_"]:active { transform: translateY(4px) !important; box-shadow: 0 2px 0 #333333 !important; }
 
-    /* LÍNEA DE TIEMPO CON NUEVA IDENTIDAD */
     .horizontal-timeline {
         display: flex; overflow-x: auto; background: #1a1a1a;
         padding: 5px; border-radius: 5px; margin: 4px 0;
@@ -57,7 +50,7 @@ st.markdown("""
     .badge-lud { background: #4B2E2A; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 900; white-space: nowrap; border: 1px solid #fff; }
     .badge-riv { background: #000000; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 900; white-space: nowrap; border: 1px solid #fff; }
 
-    /* SEMÁFORO DE JUGADORES */
+    .pista-portero { background-color: #008080 !important; color: white !important; border-radius: 8px; padding: 2px; text-align: center; font-weight: 900; border: 2px solid white; }
     .pista-verde { background-color: #00FF41 !important; color: #000 !important; border-radius: 8px; padding: 2px; text-align: center; font-weight: 900; }
     .pista-naranja { background-color: #FF5E00 !important; color: white !important; border-radius: 8px; padding: 2px; text-align: center; font-weight: 900; border: 1px solid white; }
     .pista-roja { background-color: #FF0000 !important; color: white !important; border-radius: 8px; padding: 2px; text-align: center; font-weight: 900; border: 2px solid #FFFF00; animation: blinker 0.8s linear infinite; }
@@ -73,7 +66,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- LÓGICA DE ESTADO ---
+# --- INICIALIZACIÓN ---
 if 'js' not in st.session_state:
     n = ["Serra","Julian","Omar","Tony","Rochina","Benages","Pedrito","Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Jose","Coque","Nacho Gomez"]
     st.session_state.update({
@@ -84,7 +77,7 @@ if 'js' not in st.session_state:
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v19")
+st_autorefresh(1000, key="f5_lud_v20.1")
 
 ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -125,17 +118,12 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# Triple Botón
 c_bt = st.columns([1, 1, 1])
 for i, col in enumerate(["tm_l", "tm_m", "tm_r"]):
     if c_bt[i].button("▶ START / STOP ⏸", key=col): toggle_timer(); st.rerun()
 
-# --- LÍNEA DE TIEMPO COLORERADA ---
 if s.eventos:
-    tl_html = ""
-    for e in s.eventos:
-        cl_badge = "badge-riv" if ('#' in e['info'] or 'RIV' in e['info']) else "badge-lud"
-        tl_html += f"<span class='{cl_badge}'>{e['min']}' {e['info']}</span>"
+    tl_html = "".join([f"<span class='{'badge-riv' if ('#' in e['info'] or 'RIV' in e['info']) else 'badge-lud'}'>{e['min']}' {e['info']}</span>" for e in s.eventos])
     st.markdown(f"<div class='horizontal-timeline'>{tl_html}</div>", unsafe_allow_html=True)
 
 # Goles y Config
@@ -152,16 +140,25 @@ with c_act[2]: s.rv = st.text_input("Rival", s.rv, label_visibility="collapsed")
 with c_act[3]: 
     if st.button("🗑️ RESET"): st.session_state.clear(); st.rerun()
 
-# Jugadores
+# --- JUGADORES (Con contador de Rotaciones R) ---
 cols = st.columns(6)
 for i, j in enumerate(s.js):
     with cols[i%6]:
         cur_sec = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
         tot_sec = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-        cl = "banquillo" if not j['p'] else ("pista-verde" if cur_sec < 240 else ("pista-naranja" if cur_sec < 360 else "pista-roja"))
+        
+        if not j['p']:
+            cl = "banquillo"
+        elif j['n'] in ["Serra", "Jose"]:
+            cl = "pista-portero"
+        else:
+            if cur_sec < 240: cl = "pista-verde"
+            elif cur_sec < 360: cl = "pista-naranja"
+            else: cl = "pista-roja"
+            
         st.markdown(f"<div class='{cl}'>", unsafe_allow_html=True)
         mc, vc = divmod(int(cur_sec), 60); mt, vt = divmod(int(tot_sec), 60)
-        st.markdown(f"<div style='font-size:0.85rem; line-height:1;'>{j['n']}</div><div style='font-size:1.3rem; line-height:1;'>{mc:02d}:{vc:02d}</div><div style='font-size:0.7rem;'>Σ{mt:02d}:{vt:02d}</div>", 1)
+        st.markdown(f"<div style='font-size:0.85rem; line-height:1;'>{j['n']}</div><div style='font-size:1.3rem; line-height:1;'>{mc:02d}:{vc:02d}</div><div style='font-size:0.7rem;'>Σ{mt:02d}:{vt:02d} | R:{j['r']}</div>", 1)
         if st.button("🔄", key=f"c_{i}", use_container_width=True):
             if not j["p"] and sum(1 for x in s.js if x["p"]) < 5:
                 j["p"], j["i"], j["r"] = True, (ah if s.on else None), j["r"]+1; j["tt"] = 0.0
@@ -174,11 +171,11 @@ for i, j in enumerate(s.js):
 # Footer
 st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
 f1, f2, f3 = st.columns([2.5, 3, 2.5])
-with f1: # LUD
+with f1: 
     st.button("❌ F+", key="flp", use_container_width=True, on_click=lambda: setattr(s, 'fl', s.fl+1))
     st.button("F-", key="flm", use_container_width=True, on_click=lambda: setattr(s, 'fl', max(0, s.fl-1)))
     if st.button("⏱️ TM LUD"): toggle_timer(); s.tm, s.tm_i = True, time.time(); st.rerun()
-with f2: # Tarjetas
+with f2:
     c_t1, c_t2 = st.columns(2)
     with c_t1: # LUD
         with st.popover("🟨", use_container_width=True):
@@ -197,7 +194,7 @@ with f2: # Tarjetas
     c_p1, c_p2 = st.columns(2)
     c_p1.button(f"🧤 {s.pm}", use_container_width=True, on_click=lambda: setattr(s, 'pm', s.pm+1))
     c_p2.button(f"👟 {s.pp}", use_container_width=True, on_click=lambda: setattr(s, 'pp', s.pp+1))
-with f3: # RIVAL
+with f3:
     st.button("❌ F+", key="frp", use_container_width=True, on_click=lambda: setattr(s, 'fr', s.fr+1))
     st.button("F-", key="frm", use_container_width=True, on_click=lambda: setattr(s, 'fr', max(0, s.fr-1)))
     if st.button("⏱️ TM RIV"): toggle_timer(); s.tm, s.tm_i = True, time.time(); st.rerun()
