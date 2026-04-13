@@ -4,88 +4,71 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v11.1", layout="wide")
+st.set_page_config(page_title="Levante UD Match Control", layout="wide")
 
-# --- CSS ULTRA COMPACTO CON ESCUDO ---
+# --- CSS ULTRA-REDUCIDO - EDICIÓN LEVANTE UD ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;700;900&display=swap');
     
-    html, body, [class*="css"] { font-family: 'Roboto', sans-serif; background-color: #f0f2f5; overflow: hidden; }
-    .block-container { padding: 0.2rem !important; max-width: 100% !important; }
+    html, body, [class*="css"] { font-family: 'Roboto', sans-serif; background-color: #f4f4f4; overflow: hidden; }
+    .block-container { padding: 0.1rem !important; max-width: 100% !important; }
     [data-testid="stVerticalBlock"] > div { gap: 0rem !important; }
 
     .header-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 15px;
-        margin-bottom: 2px;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        padding: 2px; background: white; border-radius: 0 0 12px 12px;
+        border-bottom: 2px solid #003D7A;
     }
 
     .stadium-clock {
         font-family: 'Roboto Mono', monospace;
-        font-size: 5.5rem !important;
-        font-weight: 700;
-        color: #001A33;
-        line-height: 0.9;
-        text-align: center;
+        font-size: 4.5rem !important;
+        font-weight: 700; color: #003D7A; /* Azul Levante */
+        line-height: 0.8; text-align: center; margin: 1px 0;
     }
 
+    /* Botón START/STOP estilo LUD */
     div.stButton > button[key="tm_m"] {
-        width: 100% !important;
-        max-width: 420px !important;
-        height: 60px !important;
-        background-color: #003D7A !important;
-        color: white !important;
-        border: 3px solid #ed1c24 !important;
-        border-radius: 12px !important;
-        font-size: 1.5rem !important;
-        font-weight: 900 !important;
-        margin: 5px auto !important;
-        display: block !important;
+        width: 100% !important; max-width: 300px !important;
+        height: 45px !important; background-color: #003D7A !important;
+        color: white !important; border: 2px solid #ed1c24 !important;
+        border-radius: 10px !important; font-size: 1.2rem !important;
+        font-weight: 900 !important; margin: 2px auto !important; display: block !important;
     }
 
     .horizontal-timeline {
-        display: flex;
-        overflow-x: auto;
-        white-space: nowrap;
-        background: white;
-        padding: 4px;
-        border-radius: 8px;
-        margin: 5px 0;
-        border: 1px solid #ddd;
-        gap: 5px;
+        display: flex; overflow-x: auto; background: white;
+        padding: 2px; border-radius: 5px; margin: 2px 0;
+        border: 1px solid #003D7A; gap: 4px;
     }
-    .horizontal-timeline::-webkit-scrollbar { display: none; }
 
-    .pista-activa { background-color: #00C853 !important; color: white !important; border-radius: 8px; padding: 5px; text-align: center; }
-    .banquillo-espera { background-color: #D50000 !important; color: white !important; border-radius: 8px; padding: 5px; text-align: center; }
+    .pista-activa { background-color: #00C853 !important; color: white !important; border-radius: 6px; padding: 3px; text-align: center; }
+    .banquillo-espera { background-color: #ed1c24 !important; color: white !important; border-radius: 6px; padding: 3px; text-align: center; }
     
+    div.stButton > button[key^="c_"] { height: 1.8em !important; font-size: 0.75rem !important; padding: 0 !important; }
+
     .footer-control {
-        background-color: #ffffff;
-        padding: 8px;
-        border-radius: 15px 15px 0 0;
-        box-shadow: 0 -3px 10px rgba(0,0,0,0.1);
-        margin-top: 5px;
+        background-color: #ffffff; padding: 4px;
+        border-radius: 10px 10px 0 0; border-top: 2px solid #003D7A;
+        margin-top: 2px;
     }
+    
+    [data-testid="stMetricValue"] { font-size: 1.5rem !important; color: #003D7A !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN ---
 if 'js' not in st.session_state:
     n = ["Serra","Julian","Omar","Tony","Rochina","Benages","Pedrito","Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Jose","Coque","Nacho Gomez"]
-    st.session_state.js = [{"n":x,"tt":0.0,"tot":0.0,"r":0,"i":None,"p":False} for x in n]
-    st.session_state.eventos = []
-    st.session_state.pm, st.session_state.pp = 0, 0
-    st.session_state.al, st.session_state.rl, st.session_state.ar, st.session_state.rr, st.session_state.ml, st.session_state.mr, st.session_state.fl, st.session_state.fr = 0,0,0,0,0,0,0,0
-    st.session_state.ta, st.session_state.ic, st.session_state.on, st.session_state.pa = 0.0,None,False,"1T"
-    st.session_state.rv = "RIVAL"
-    st.session_state.tm, st.session_state.tm_i = False, None
-    st.session_state.t1_abs, st.session_state.t2_abs = 0.0, 0.0
+    st.session_state.update({
+        "js": [{"n":x,"tt":0.0,"tot":0.0,"r":0,"i":None,"p":False} for x in n],
+        "eventos": [], "pm": 0, "pp": 0, "al": 0, "rl": 0, "ar": 0, "rr": 0, 
+        "ml": 0, "mr": 0, "fl": 0, "fr": 0, "ta": 0.0, "ic": None, "on": False, 
+        "pa": "1T", "rv": "RIVAL", "tm": False, "tm_i": None, "t1_abs": 0.0, "t2_abs": 0.0
+    })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_v11.1")
+st_autorefresh(1000, key="f5_lud_final")
 
 ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -96,35 +79,25 @@ if s.on:
     if s.pa == "1T": s.t1_abs = tr
     else: s.t2_abs = tr
 
-# Lógica TM
-tm_sec = 0
-if s.tm:
-    elap = ah - s.tm_i
-    tm_sec = max(0, 60 - int(elap))
-    if tm_sec == 0: s.tm = False
+tm_sec = max(0, 60 - int(ah - s.tm_i)) if s.tm and s.tm_i else 0
+if s.tm and tm_sec == 0: s.tm = False
 
 def stop_match():
     if s.on:
         now = time.time()
-        s.ta += now - s.ic
-        s.on, s.ic = False, None
+        s.ta += now - s.ic; s.on, s.ic = False, None
         for j in s.js:
             if j["p"] and j["i"]:
                 d = now - j["i"]; j["tot"] += d; j["tt"] += d; j["i"] = None
 
-# --- UI CABECERA CON ESCUDO ---
-st.markdown(f"""
-    <div class="header-container">
-        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/1200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png" width="50">
-        <h2 style='color:#003D7A; margin:0;'>LEVANTE UD MATCH CONTROL</h2>
-    </div>
-    """, unsafe_allow_html=True)
+# CABECERA LUD
+st.markdown(f'<div class="header-container"><img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/1200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png" width="35"><b style="color:#003D7A; font-size:1rem;">LEVANTE UD MATCH CONTROL</b></div>', unsafe_allow_html=True)
 
-if s.tm:
-    st.markdown(f"<div class='stadium-clock' style='color:#FF9800;'>⏱️ {tm_sec}s</div>", unsafe_allow_html=True)
+# CRONO
+if s.tm: st.markdown(f"<div class='stadium-clock' style='color:#FF9800;'>{tm_sec}s</div>", unsafe_allow_html=True)
 else:
-    mv, sv = divmod(int(rem), 60)
-    st.markdown(f"<div class='stadium-clock'>{mv:02d}:{sv:02d}</div>", unsafe_allow_html=True)
+    m, sec = divmod(int(rem), 60)
+    st.markdown(f"<div class='stadium-clock'>{m:02d}:{sec:02d}</div>", unsafe_allow_html=True)
 
 if st.button("▶ START / STOP ⏸", key="tm_m"):
     if not s.on:
@@ -134,80 +107,62 @@ if st.button("▶ START / STOP ⏸", key="tm_m"):
     else: stop_match()
     st.rerun()
 
-# LÍNEA SUCESOS
+# LINEA EVENTOS
 if s.eventos:
-    tl_html = "<div class='horizontal-timeline'>"
-    for ev in s.eventos:
-        icon = "⚽" if ev['tipo']=='G' else "🟨" if ev['tipo']=='A' else "🟥"
-        bg = "#003D7A" if ev['equipo']=='LUD' else "#eee"; tx = "#fff" if ev['equipo']=='LUD' else "#000"
-        tl_html += f"<span class='event-badge' style='background:{bg}; color:{tx};'>{ev['min']}' {icon} {ev['info']}</span>"
-    st.markdown(tl_html + "</div>", unsafe_allow_html=True)
+    tl = "".join([f"<span style='background:#003D7A;color:white;padding:1px 4px;border-radius:3px;font-size:0.7rem;margin-right:3px;'>{e['min']}' {e['info']}</span>" for e in s.eventos])
+    st.markdown(f"<div class='horizontal-timeline'>{tl}</div>", unsafe_allow_html=True)
 
-# MARCADORES COMPACTOS
-c_score = st.columns([1.5, 1.5, 1, 1, 1])
-with c_score[0]:
+# SCORE BAR
+c1, c2, c3, c4 = st.columns([1, 1, 2, 1])
+with c1: 
     st.metric("LUD", s.ml)
-    with st.popover("⚽ GOL", use_container_width=True):
-        p_gol = st.selectbox("Autor", [j['n'] for j in s.js], key="gl")
-        if st.button("OK"): s.ml += 1; s.eventos.append({'min':min_act, 'tipo':'G', 'equipo':'LUD', 'info':p_gol}); st.rerun()
-with c_score[1]:
-    st.metric(s.rv[:8], s.mr)
-    with st.popover("⚽ GOL", use_container_width=True):
-        d_gol = st.number_input("Dorsal", 1, 99, key="gr")
-        if st.button("OK RIVAL"): s.mr += 1; s.eventos.append({'min':min_act, 'tipo':'G', 'equipo':'RIV', 'info':f"#{d_gol}"}); st.rerun()
-with c_score[2]:
-    m1, se1 = divmod(int(s.t1_abs), 60)
-    st.caption(f"1T: {m1:02d}:{se1:02d}")
-    m2, se2 = divmod(int(s.t2_abs), 60)
-    st.caption(f"2T: {m2:02d}:{se2:02d}")
-with c_score[3]:
-    s.pa = st.selectbox("P", ["1T", "2T"], index=0 if s.pa=="1T" else 1, label_visibility="collapsed")
-with c_score[4]:
+    if st.button("⚽", key="g1"): s.ml+=1; s.eventos.append({'min':min_act,'info':'⚽LUD'}); st.rerun()
+with c2: 
+    st.metric("RIV", s.mr)
+    if st.button("⚽", key="g2"): s.mr+=1; s.eventos.append({'min':min_act,'info':'⚽RIV'}); st.rerun()
+with c3:
+    m1, se1 = divmod(int(s.t1_abs), 60); m2, se2 = divmod(int(s.t2_abs), 60)
+    st.caption(f"1T: {m1:02d}:{se1:02d} | 2T: {m2:02d}:{se2:02d}")
+    s.pa = st.selectbox("", ["1T","2T"], index=0 if s.pa=="1T" else 1, label_visibility="collapsed")
+with c4:
     if st.button("🗑️"): st.session_state.clear(); st.rerun()
 
-# JUGADORES
-st.markdown("<div style='margin-bottom:5px;'></div>", unsafe_allow_html=True)
-cols_j = st.columns(5)
-for idx, j in enumerate(s.js):
-    with cols_j[idx%5]:
-        st_cl = "pista-activa" if j['p'] else "banquillo-espera"
-        with st.container():
-            st.markdown(f"<div class='{st_cl}'>", unsafe_allow_html=True)
-            tc = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0); mj, vj = divmod(int(tc), 60)
-            tl = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0); mt, vt = divmod(int(tl), 60)
-            st.markdown(f"<b>{j['n']}</b> R:{j['r']}", 1)
-            st.markdown(f"<div style='font-size:1.4rem; font-weight:900;'>{mj:02d}:{vj:02d}</div>", 1)
-            st.markdown(f"<div style='font-size:0.7rem; opacity:0.8;'>Σ {mt:02d}:{vt:02d}</div>", 1)
-            if st.button("🔄", key=f"c_{idx}", use_container_width=True, disabled=s.tm):
-                if not j["p"] and sum(1 for x in s.js if x["p"]) < 5:
-                    j["p"], j["i"], j["r"] = True, (ah if s.on else None), j["r"]+1; j["tt"] = 0.0
-                elif j["p"]:
-                    if s.on and j["i"]: d = ah-j["i"]; j["tot"]+=d; j["tt"]+=d
-                    j["p"], j["i"] = False, None
-                st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
+# JUGADORES (6 por fila para iPad 11")
+st.markdown("<div style='margin-bottom:2px;'></div>", unsafe_allow_html=True)
+cols = st.columns(6)
+for i, j in enumerate(s.js):
+    with cols[i%6]:
+        cl = "pista-activa" if j['p'] else "banquillo-espera"
+        st.markdown(f"<div class='{cl}'>", unsafe_allow_html=True)
+        cur = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0); mc, vc = divmod(int(cur), 60)
+        tot = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0); mt, vt = divmod(int(tot), 60)
+        st.markdown(f"<b style='font-size:0.8rem;'>{j['n']}</b>", 1)
+        st.markdown(f"<b style='font-size:1.2rem;'>{mc:02d}:{vc:02d}</b>", 1)
+        st.markdown(f"<span style='font-size:0.65rem;'>Σ{mt:02d}:{vt:02d} R:{j['r']}</span>", 1)
+        if st.button("🔄", key=f"c_{i}", use_container_width=True):
+            if not j["p"] and sum(1 for x in s.js if x["p"]) < 5:
+                j["p"], j["i"], j["r"] = True, (ah if s.on else None), j["r"]+1; j["tt"] = 0.0
+            elif j["p"]:
+                if s.on and j["i"]: d = ah-j["i"]; j["tot"]+=d; j["tt"]+=d
+                j["p"], j["i"] = False, None
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # FOOTER
 st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
-f_cols = st.columns([3, 4, 3])
-with f_cols[0]:
-    st.caption(f"LUD F: {s.fl}")
-    st.button("❌ F+", key="flp", on_click=lambda: setattr(s, 'fl', s.fl+1))
-    if st.button("⏱️ TM LUD"): stop_match(); s.tm, s.tm_i = True, time.time(); st.rerun()
-with f_cols[1]:
-    c_t = st.columns(2)
-    with c_t[0]:
-        with st.popover("🟨", use_container_width=True):
-            p_a = st.selectbox("J", [j['n'] for j in s.js], key="pal")
-            if st.button("OK Y"): s.al+=1; s.eventos.append({'min':min_act, 'tipo':'A', 'equipo':'LUD', 'info':p_a}); st.rerun()
-        with st.popover("🟥", use_container_width=True):
-            p_r = st.selectbox("J", [j['n'] for j in s.js], key="prl")
-            if st.button("OK R"): s.rl+=1; s.eventos.append({'min':min_act, 'tipo':'R', 'equipo':'LUD', 'info':p_r}); st.rerun()
-    with c_t[1]:
-        if st.button(f"🧤 {s.pm}", use_container_width=True): s.pm+=1; st.rerun()
-        if st.button(f"👟 {s.pp}", use_container_width=True): s.pp+=1; st.rerun()
-with f_cols[2]:
-    st.caption(f"RIV F: {s.fr}")
-    st.button("❌ F+", key="frp", on_click=lambda: setattr(s, 'fr', s.fr+1))
-    if st.button("⏱️ TM RIV"): stop_match(); s.tm, s.tm_i = True, time.time(); st.rerun()
+f1, f2, f3 = st.columns([2, 3, 2])
+with f1:
+    st.caption(f"Faltas LUD: {s.fl}")
+    st.button("F+", key="flud", on_click=lambda: setattr(s, 'fl', s.fl+1))
+    if st.button("TM LUD"): stop_match(); s.tm, s.tm_i = True, time.time(); st.rerun()
+with f2:
+    t1, t2 = st.columns(2)
+    t1.button(f"🟨 {s.al}", on_click=lambda: setattr(s, 'al', s.al+1))
+    t2.button(f"🧤 {s.pm}", on_click=lambda: setattr(s, 'pm', s.pm+1))
+    t1.button(f"🟥 {s.rl}", on_click=lambda: setattr(s, 'rl', s.rl+1))
+    t2.button(f"👟 {s.pp}", on_click=lambda: setattr(s, 'pp', s.pp+1))
+with f3:
+    st.caption(f"Faltas RIV: {s.fr}")
+    st.button("F+", key="friv", on_click=lambda: setattr(s, 'fr', s.fr+1))
+    if st.button("TM RIV"): stop_match(); s.tm, s.tm_i = True, time.time(); st.rerun()
 st.markdown("</div>", unsafe_allow_html=True)
