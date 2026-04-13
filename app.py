@@ -4,7 +4,7 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v9.1", layout="wide")
+st.set_page_config(page_title="LUD Match Control v9.2", layout="wide")
 
 st.markdown("""
     <style>
@@ -13,6 +13,7 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Roboto', sans-serif; }
     .block-container {padding-top:0.3rem; padding-bottom:0rem; padding-left:0.3rem; padding-right:0.3rem; background-color: #f0f2f5;}
     
+    /* CENTRADO FORZADO DE COLUMNAS */
     [data-testid="column"] {
         display: flex !important;
         flex-direction: column !important;
@@ -27,47 +28,27 @@ st.markdown("""
         font-weight: 700;
         color: #001A33;
         line-height: 1;
-        margin-bottom: 0px;
-        text-align: center;
-        width: 100%;
-    }
-    
-    .stadium-tm {
-        font-family: 'Roboto Mono', monospace;
-        font-size: 4.5rem !important;
-        color: #FF9800;
-        line-height: 1;
+        margin-bottom: 5px;
         text-align: center;
     }
 
-    /* BOTÓN START/STOP: AJUSTADO AL ANCHO DEL CRONO */
+    /* BOTÓN START/STOP GIGANTE Y CENTRADO */
     div.stButton > button[key="tm_m"] {
-        height: 3.5em !important;
-        width: 380px !important; /* Ancho ajustado para casar con el texto del crono */
+        height: 4em !important;
+        width: 100% !important; /* Ocupa todo el ancho de la columna central */
+        max-width: 500px !important; /* Ajuste para que coincida visualmente con el crono */
         background-color: #003D7A !important;
         border: 4px solid #ed1c24 !important;
         color: white !important;
-        font-size: 1.1rem !important;
+        font-size: 1.2rem !important;
         font-weight: 900 !important;
-        margin-top: 5px !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        margin: 0 auto !important;
+        display: block !important;
     }
 
-    /* CARTULINAS PURAS (SIN NÚMERO) */
-    button[key^="al"] { 
-        background-color: #FFEB3B !important; 
-        color: transparent !important; /* Escondemos el texto para que solo sea color */
-        border-radius: 4px !important; 
-        height: 3.5em !important;
-        box-shadow: 0 3px 6px rgba(0,0,0,0.2) !important;
-    }
-    button[key^="rl"] { 
-        background-color: #F44336 !important; 
-        color: transparent !important; 
-        border-radius: 4px !important; 
-        height: 3.5em !important;
-        box-shadow: 0 3px 6px rgba(0,0,0,0.2) !important;
-    }
+    /* ESTILO CARTULINAS FOOTER */
+    button[key^="al"] { background-color: #FFEB3B !important; border: 1px solid #FBC02D !important; }
+    button[key^="rl"] { background-color: #F44336 !important; border: 1px solid #D32F2F !important; }
 
     /* FICHAS JUGADORES */
     .pista-activa { background-color: #00C853 !important; color: white !important; }
@@ -87,8 +68,6 @@ st.markdown("""
         height: 2.8em;
         width: 98% !important;
         font-weight: 800 !important;
-        text-transform: uppercase;
-        border: none !important;
     }
 
     .mini-chip-container { display: flex; justify-content: center; gap: 4px; margin-top: 2px; }
@@ -148,11 +127,12 @@ with c_sc[0]:
 
 with c_sc[1]:
     if s.tm:
-        st.markdown(f"<div class='stadium-tm'>{tm_sec}s</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='stadium-clock' style='color:#FF9800;'>⏱️ {tm_sec}s</div>", unsafe_allow_html=True)
     else:
         mr_v, sr_v = divmod(int(rem), 60)
         st.markdown(f"<div class='stadium-clock'>{mr_v:02d}:{sr_v:02d}</div>", unsafe_allow_html=True)
     
+    # Botón Start/Stop forzado al ancho del crono
     if st.button("▶ START / STOP ⏸", key="tm_m"):
         if not s.on:
             s.ic, s.on, s.tm = ah, True, False
@@ -202,21 +182,21 @@ b_footer = st.columns([3, 4, 3])
 
 with b_footer[0]:
     st.markdown("<div style='font-size:0.7rem; font-weight:900; color:#333; text-align:center;'>LUD</div>", 1)
-    if st.button("❌ F+", key="flp"): s.fl+=1; st.rerun()
-    if st.button("F-", key="flm"): s.fl=max(0, s.fl-1); st.rerun()
+    if st.button("❌ FALTA +", key="flp"): s.fl+=1; st.rerun()
+    if st.button("FALTA -", key="flm"): s.fl=max(0, s.fl-1); st.rerun()
     if st.button("⏱️ TM", key="tm_l"):
         if s.on: s.ta += ah-s.ic; s.on, s.ic = False, None
         s.tm, s.tm_i = True, ah; st.rerun()
 
 with b_footer[1]:
-    st.markdown("<div style='font-size:0.7rem; font-weight:900; color:#666; text-align:center;'>CARTULINAS Y PORTERO</div>", 1)
+    st.markdown("<div style='font-size:0.7rem; font-weight:900; color:#666; text-align:center;'>DISCIPLINA / PORTERO</div>", 1)
     c_t = st.columns(2)
     with c_t[0]:
-        if st.button(".", key="al1"): s.al+=1; st.rerun()
-        if st.button(".", key="rl1"): s.rl+=1; st.rerun()
+        if st.button("🟨", key="al1"): s.al+=1; st.rerun()
+        if st.button("🟥", key="rl1"): s.rl+=1; st.rerun()
     with c_t[1]:
-        if st.button(".", key="al2"): s.ar+=1; st.rerun()
-        if st.button(".", key="rl2"): s.rr+=1; st.rerun()
+        if st.button("🟨", key="al2"): s.ar+=1; st.rerun()
+        if st.button("🟥", key="rl2"): s.rr+=1; st.rerun()
     st.markdown("<hr style='margin:8px 0; width:100%;'>", 1)
     c_p = st.columns(2)
     if c_p[0].button(f"🧤 {s.pm}", key="pm1"): s.pm+=1; st.rerun()
@@ -224,9 +204,10 @@ with b_footer[1]:
 
 with b_footer[2]:
     st.markdown(f"<div style='font-size:0.7rem; font-weight:900; color:#333; text-align:center;'>{s.rv[:5]}</div>", 1)
-    if st.button("❌ F+", key="frp"): s.fr+=1; st.rerun()
-    if st.button("F-", key="frm"): s.fr=max(0, s.fr-1); st.rerun()
+    if st.button("❌ FALTA +", key="frp"): s.fr+=1; st.rerun()
+    if st.button("FALTA -", key="frm"): s.fr=max(0, s.fr-1); st.rerun()
     if st.button("⏱️ TM", key="tm_r"):
         if s.on: s.ta += ah-s.ic; s.on, s.ic = False, None
         s.tm, s.tm_i = True, ah; st.rerun()
 st.markdown("</div>", 1)
+
