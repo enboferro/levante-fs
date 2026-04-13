@@ -4,14 +4,20 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v7.8", layout="wide")
+st.set_page_config(page_title="LUD Match Control v7.9", layout="wide")
 
 st.markdown("""
     <style>
     .block-container {padding-top:0rem; padding-bottom:0rem; padding-left:0.2rem; padding-right:0.2rem;}
     [data-testid="stVerticalBlock"] > div { gap: 0rem !important; }
     
-    /* SENSIBILIDAD Y BOTONES GENERALES */
+    /* CENTRADO REAL DEL BOTÓN START/STOP */
+    .st-emotion-cache-1vt4y6f { /* Selector de columna de Streamlit */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
     div.stButton > button {
         border-radius: 8px;
         height: 3em;
@@ -22,22 +28,19 @@ st.markdown("""
         margin-bottom: 2px !important;
     }
 
-    /* BOTÓN START/STOP: ANCHO AJUSTADO AL CRONO Y CENTRADO */
+    /* BOTÓN START/STOP: FOCO TOTAL */
     div.stButton > button[key="tm_m"] {
-        height: 3.5em !important;
+        height: 3.8em !important;
         background-color: #003D7A !important;
         border: 3px solid #ed1c24 !important;
         color: white !important;
-        display: block !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
-        width: 100% !important; /* Ocupa el ancho total de su columna central */
+        max-width: 350px !important; /* Ajusta este ancho si quieres que sea más o menos ancho */
     }
 
-    /* COLORES ESPECÍFICOS */
-    div.stButton > button[key*="p_big"] { background-color: #d4edda !important; color: #155724 !important; }
-    div.stButton > button[key*="m_big"] { background-color: #f8d7da !important; color: #721c24 !important; }
-    div.stButton > button[key^="tm_"] { background-color: #fff3e0 !important; color: #e65100 !important; }
+    div.stButton > button:active {
+        transform: scale(0.95) !important;
+        background-color: #003D7A !important;
+    }
 
     .label-x {font-size:0.75rem; font-weight:900; text-align:center; color:#fff; text-transform: uppercase; margin-bottom: 4px; background: #333; padding: 4px; border-radius: 4px;}
     .footer-control { background-color: #ffffff; padding: 15px; border-radius: 15px; border: 3px solid #003D7A; margin-top: 10px; }
@@ -96,13 +99,14 @@ with c_sc[0]:
 
 with c_sc[1]:
     if s.tm:
-        st.markdown(f"<h1 style='text-align:center;font-size:2.5rem;color:orange;margin:0;'>TM {tm_sec}s</h1>",1)
+        st.markdown(f"<div style='text-align:center;'><h1 style='font-size:2.5rem;color:orange;margin:0;'>TM {tm_sec}s</h1></div>", unsafe_allow_html=True)
     else:
         mr_v, sr_v = divmod(int(rem), 60)
-        st.markdown(f"<h1 style='text-align:center;font-size:3rem;color:red;margin:0;line-height:1;'>{mr_v:02d}:{sr_v:02d}</h1>",1)
+        st.markdown(f"<div style='text-align:center;'><h1 style='font-size:3rem;color:red;margin:0;line-height:1;'>{mr_v:02d}:{sr_v:02d}</h1></div>", unsafe_allow_html=True)
     
-    # El botón ahora ocupa el 100% de la columna '4' (que es el ancho del tiempo)
-    if st.button("▶ START / STOP ⏸", key="tm_m", type="primary"):
+    # Contenedor para forzar el centrado del botón
+    st.markdown("<div style='display: flex; justify-content: center; width: 100%;'>", unsafe_allow_html=True)
+    if st.button("▶ START / STOP ⏸", key="tm_m"):
         if not s.on:
             s.ic, s.on, s.tm = ah, True, False
             for j in s.js: 
@@ -112,6 +116,7 @@ with c_sc[1]:
             for j in s.js:
                 if j["p"] and j["i"]: d_d = ah-j["i"]; j["tot"]+=d_d; j["tt"]+=d_d; j["i"]=None
         st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with c_sc[2]:
     st.metric(s.rv[:8], s.mr)
