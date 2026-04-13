@@ -4,18 +4,20 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v7.9", layout="wide")
+st.set_page_config(page_title="LUD Match Control v8.0", layout="wide")
 
 st.markdown("""
     <style>
     .block-container {padding-top:0rem; padding-bottom:0rem; padding-left:0.2rem; padding-right:0.2rem;}
     [data-testid="stVerticalBlock"] > div { gap: 0rem !important; }
     
-    /* CENTRADO REAL DEL BOTÓN START/STOP */
-    .st-emotion-cache-1vt4y6f { /* Selector de columna de Streamlit */
+    /* ELIMINAR PADDING DE COLUMNAS PARA ALINEACIÓN REAL */
+    [data-testid="column"] {
+        padding: 0px !important;
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: center;
     }
 
     div.stButton > button {
@@ -28,22 +30,23 @@ st.markdown("""
         margin-bottom: 2px !important;
     }
 
-    /* BOTÓN START/STOP: FOCO TOTAL */
+    /* BOTÓN START/STOP: ANCHO TOTAL DEL CONTENEDOR CENTRAL */
     div.stButton > button[key="tm_m"] {
-        height: 3.8em !important;
+        height: 4em !important;
         background-color: #003D7A !important;
         border: 3px solid #ed1c24 !important;
         color: white !important;
-        max-width: 350px !important; /* Ajusta este ancho si quieres que sea más o menos ancho */
+        width: 100% !important;
+        max-width: none !important;
     }
 
     div.stButton > button:active {
-        transform: scale(0.95) !important;
+        transform: scale(0.96) !important;
         background-color: #003D7A !important;
     }
 
-    .label-x {font-size:0.75rem; font-weight:900; text-align:center; color:#fff; text-transform: uppercase; margin-bottom: 4px; background: #333; padding: 4px; border-radius: 4px;}
-    .footer-control { background-color: #ffffff; padding: 15px; border-radius: 15px; border: 3px solid #003D7A; margin-top: 10px; }
+    .label-x {font-size:0.75rem; font-weight:900; text-align:center; color:#fff; text-transform: uppercase; margin-bottom: 4px; background: #333; padding: 4px; border-radius: 4px; width: 100%;}
+    .footer-control { background-color: #ffffff; padding: 15px; border-radius: 15px; border: 3px solid #003D7A; margin-top: 10px; width: 100%;}
     
     @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0.3;} 100% {opacity: 1;} }
     .blink { animation: blink 1s infinite; }
@@ -75,7 +78,7 @@ if s.tm:
     if tm_sec == 0: s.tm = False
 
 # CABECERA
-st.markdown(f'<div style="text-align:center; border-bottom: 2px solid #ed1c24; margin-bottom:5px;"><h1 style="color:#003D7A; margin:0; font-size:1.2rem;">LUD MATCH CONTROL</h1></div>', unsafe_allow_html=True)
+st.markdown(f'<div style="text-align:center; border-bottom: 2px solid #ed1c24; margin-bottom:5px; width: 100%;"><h1 style="color:#003D7A; margin:0; font-size:1.2rem;">LUD MATCH CONTROL</h1></div>', unsafe_allow_html=True)
 
 d_top = st.columns([1.5, 1, 1, 0.5])
 s.rv = d_top[0].text_input("R", s.rv, key="irv", label_visibility="collapsed").upper()
@@ -88,9 +91,9 @@ with d_top[2]:
                 if j["p"]: j["p"], j["i"], j["r"] = False, None, 0
                 elif cp < 5: j["p"], j["r"] = True, 1; j["i"] = ah if s.on else None
                 st.rerun()
-if d_top[3].button("🗑️", key="main_reset_btn"): st.session_state.clear(); st.rerun()
+if d_top[3].button("🗑️", key="main_reset_btn", use_container_width=True): st.session_state.clear(); st.rerun()
 
-# MARCADOR
+# MARCADOR CENTRAL
 c_sc = st.columns([2, 4, 2])
 with c_sc[0]:
     st.metric("LUD", s.ml)
@@ -98,15 +101,14 @@ with c_sc[0]:
         s.ml += 1; s.gi.append({"team":"LUD", "name":"LUD", "m":min_game}); st.rerun()
 
 with c_sc[1]:
+    # El tiempo y el botón ahora están en el mismo contenedor flex, alineados al centro
     if s.tm:
-        st.markdown(f"<div style='text-align:center;'><h1 style='font-size:2.5rem;color:orange;margin:0;'>TM {tm_sec}s</h1></div>", unsafe_allow_html=True)
+        st.markdown(f"<h1 style='font-size:2.5rem;color:orange;margin:0;text-align:center;'>TM {tm_sec}s</h1>", unsafe_allow_html=True)
     else:
         mr_v, sr_v = divmod(int(rem), 60)
-        st.markdown(f"<div style='text-align:center;'><h1 style='font-size:3rem;color:red;margin:0;line-height:1;'>{mr_v:02d}:{sr_v:02d}</h1></div>", unsafe_allow_html=True)
+        st.markdown(f"<h1 style='font-size:3rem;color:red;margin:0;line-height:1;text-align:center;'>{mr_v:02d}:{sr_v:02d}</h1>", unsafe_allow_html=True)
     
-    # Contenedor para forzar el centrado del botón
-    st.markdown("<div style='display: flex; justify-content: center; width: 100%;'>", unsafe_allow_html=True)
-    if st.button("▶ START / STOP ⏸", key="tm_m"):
+    if st.button("▶ START / STOP ⏸", key="tm_m", use_container_width=True):
         if not s.on:
             s.ic, s.on, s.tm = ah, True, False
             for j in s.js: 
@@ -116,7 +118,6 @@ with c_sc[1]:
             for j in s.js:
                 if j["p"] and j["i"]: d_d = ah-j["i"]; j["tot"]+=d_d; j["tt"]+=d_d; j["i"]=None
         st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
 
 with c_sc[2]:
     st.metric(s.rv[:8], s.mr)
