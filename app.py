@@ -4,7 +4,7 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control by Kike", layout="wide")
+st.set_page_config(page_title="LUD Match Control", layout="wide")
 
 # --- CSS ALTO CONTRASTE, SIMETRÍA Y TÍTULO ---
 st.markdown("""
