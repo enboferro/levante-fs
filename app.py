@@ -4,14 +4,14 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v7.7", layout="wide")
+st.set_page_config(page_title="LUD Match Control v7.8", layout="wide")
 
 st.markdown("""
     <style>
     .block-container {padding-top:0rem; padding-bottom:0rem; padding-left:0.2rem; padding-right:0.2rem;}
     [data-testid="stVerticalBlock"] > div { gap: 0rem !important; }
     
-    /* SENSIBILIDAD Y BOTONES */
+    /* SENSIBILIDAD Y BOTONES GENERALES */
     div.stButton > button {
         border-radius: 8px;
         height: 3em;
@@ -22,15 +22,16 @@ st.markdown("""
         margin-bottom: 2px !important;
     }
 
-    /* BOTÓN START/STOP CENTRADO Y AJUSTADO AL ANCHO DEL TIEMPO */
+    /* BOTÓN START/STOP: ANCHO AJUSTADO AL CRONO Y CENTRADO */
     div.stButton > button[key="tm_m"] {
         height: 3.5em !important;
         background-color: #003D7A !important;
         border: 3px solid #ed1c24 !important;
-        color: white;
-        max-width: 300px; /* Ajuste para centrar visualmente con el tiempo */
-        margin: 0 auto;
-        display: block;
+        color: white !important;
+        display: block !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        width: 100% !important; /* Ocupa el ancho total de su columna central */
     }
 
     /* COLORES ESPECÍFICOS */
@@ -92,14 +93,16 @@ with c_sc[0]:
     st.metric("LUD", s.ml)
     if st.button("⚽ GOL LUD", key="btn_gol_lud"):
         s.ml += 1; s.gi.append({"team":"LUD", "name":"LUD", "m":min_game}); st.rerun()
+
 with c_sc[1]:
-    if s.tm: st.markdown(f"<h1 style='text-align:center;font-size:2.5rem;color:orange;margin:0;'>TM {tm_sec}s</h1>",1)
+    if s.tm:
+        st.markdown(f"<h1 style='text-align:center;font-size:2.5rem;color:orange;margin:0;'>TM {tm_sec}s</h1>",1)
     else:
         mr_v, sr_v = divmod(int(rem), 60)
         st.markdown(f"<h1 style='text-align:center;font-size:3rem;color:red;margin:0;line-height:1;'>{mr_v:02d}:{sr_v:02d}</h1>",1)
-    # BOTÓN CENTRADO
-    st.button("▶ START / STOP ⏸", key="tm_m", type="primary", use_container_width=False)
-    if st.session_state.tm_m:
+    
+    # El botón ahora ocupa el 100% de la columna '4' (que es el ancho del tiempo)
+    if st.button("▶ START / STOP ⏸", key="tm_m", type="primary"):
         if not s.on:
             s.ic, s.on, s.tm = ah, True, False
             for j in s.js: 
@@ -151,7 +154,7 @@ with b_f[0]: # LUD
     if st.button(f"🟨 AMARILLA ({s.al})", key="tal_l_btn"): s.al+=1; st.rerun()
     if st.button(f"🟥 ROJA ({s.rl})", key="trl_l_btn"): s.rl+=1; st.rerun()
 
-with b_f[1]: # TÉCNICO (Sin duelos)
+with b_f[1]: # PORTERÍA
     st.markdown("<div class='label-x'>PORTERÍA</div>", 1)
     if st.button(f"🧤 PARADA: {s.pm}", key="pm_b_btn"): s.pm+=1; st.rerun()
     if st.button(f"👟 PIE: {s.pp}", key="pp_b_btn"): s.pp+=1; st.rerun()
