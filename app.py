@@ -4,9 +4,9 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v20.1", layout="wide")
+st.set_page_config(page_title="LUD Match Control v20.2 FINAL", layout="wide")
 
-# --- CSS DE ALTO CONTRASTE ---
+# --- CSS ALTO CONTRASTE Y SIMETRÍA TOTAL ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;700;900&display=swap');
@@ -30,6 +30,7 @@ st.markdown("""
         line-height: 0.8; text-align: center;
     }
 
+    /* TRIPLE BOTÓN START/STOP */
     div.stButton > button[key^="tm_"] {
         width: 100% !important; height: 80px !important; 
         background-color: #ffffff !important;
@@ -38,7 +39,6 @@ st.markdown("""
         border-radius: 15px !important;
         font-size: 1.5rem !important; font-weight: 900 !important;
         box-shadow: 0 8px 0 #333333 !important;
-        transition: all 0.05s ease-in-out !important;
     }
     div.stButton > button[key^="tm_"]:active { transform: translateY(4px) !important; box-shadow: 0 2px 0 #333333 !important; }
 
@@ -66,7 +66,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN ---
+# --- ESTADO DE SESIÓN ---
 if 'js' not in st.session_state:
     n = ["Serra","Julian","Omar","Tony","Rochina","Benages","Pedrito","Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Jose","Coque","Nacho Gomez"]
     st.session_state.update({
@@ -77,7 +77,7 @@ if 'js' not in st.session_state:
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v20.1")
+st_autorefresh(1000, key="f5_lud_v20.2")
 
 ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -91,8 +91,7 @@ def toggle_timer():
             if j["p"]: j["i"] = s.ic
     else:
         now = time.time()
-        s.ta += now - s.ic
-        s.on, s.ic = False, None
+        s.ta += now - s.ic; s.on, s.ic = False, None
         for j in s.js:
             if j["p"] and j["i"]:
                 d = now - j["i"]; j["tot"] += d; j["tt"] += d; j["i"] = None
@@ -140,22 +139,18 @@ with c_act[2]: s.rv = st.text_input("Rival", s.rv, label_visibility="collapsed")
 with c_act[3]: 
     if st.button("🗑️ RESET"): st.session_state.clear(); st.rerun()
 
-# --- JUGADORES (Con contador de Rotaciones R) ---
+# --- JUGADORES ---
 cols = st.columns(6)
 for i, j in enumerate(s.js):
     with cols[i%6]:
         cur_sec = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
         tot_sec = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-        
-        if not j['p']:
-            cl = "banquillo"
-        elif j['n'] in ["Serra", "Jose"]:
-            cl = "pista-portero"
+        if not j['p']: cl = "banquillo"
+        elif j['n'] in ["Serra", "Jose"]: cl = "pista-portero"
         else:
             if cur_sec < 240: cl = "pista-verde"
             elif cur_sec < 360: cl = "pista-naranja"
             else: cl = "pista-roja"
-            
         st.markdown(f"<div class='{cl}'>", unsafe_allow_html=True)
         mc, vc = divmod(int(cur_sec), 60); mt, vt = divmod(int(tot_sec), 60)
         st.markdown(f"<div style='font-size:0.85rem; line-height:1;'>{j['n']}</div><div style='font-size:1.3rem; line-height:1;'>{mc:02d}:{vc:02d}</div><div style='font-size:0.7rem;'>Σ{mt:02d}:{vt:02d} | R:{j['r']}</div>", 1)
@@ -168,14 +163,19 @@ for i, j in enumerate(s.js):
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-# Footer
+# --- FOOTER SIMÉTRICO ---
 st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
-f1, f2, f3 = st.columns([2.5, 3, 2.5])
-with f1: 
-    st.button("❌ F+", key="flp", use_container_width=True, on_click=lambda: setattr(s, 'fl', s.fl+1))
-    st.button("F-", key="flm", use_container_width=True, on_click=lambda: setattr(s, 'fl', max(0, s.fl-1)))
-    if st.button("⏱️ TM LUD"): toggle_timer(); s.tm, s.tm_i = True, time.time(); st.rerun()
-with f2:
+f_left, f_mid, f_right = st.columns([2.5, 3, 2.5])
+
+with f_left: # Bloque LUD (TM en la esquina)
+    c_tm_l, c_f_l = st.columns([1.5, 1])
+    with c_tm_l:
+        if st.button("⏱️ TM LUD", key="tm_lud_btn", use_container_width=True): toggle_timer(); s.tm, s.tm_i = True, time.time(); st.rerun()
+    with c_f_l:
+        st.button("F+", key="flp", use_container_width=True, on_click=lambda: setattr(s, 'fl', s.fl+1))
+        st.button("F-", key="flm", use_container_width=True, on_click=lambda: setattr(s, 'fl', max(0, s.fl-1)))
+
+with f_mid: # Bloque Disciplina y Portero
     c_t1, c_t2 = st.columns(2)
     with c_t1: # LUD
         with st.popover("🟨", use_container_width=True):
@@ -194,8 +194,13 @@ with f2:
     c_p1, c_p2 = st.columns(2)
     c_p1.button(f"🧤 {s.pm}", use_container_width=True, on_click=lambda: setattr(s, 'pm', s.pm+1))
     c_p2.button(f"👟 {s.pp}", use_container_width=True, on_click=lambda: setattr(s, 'pp', s.pp+1))
-with f3:
-    st.button("❌ F+", key="frp", use_container_width=True, on_click=lambda: setattr(s, 'fr', s.fr+1))
-    st.button("F-", key="frm", use_container_width=True, on_click=lambda: setattr(s, 'fr', max(0, s.fr-1)))
-    if st.button("⏱️ TM RIV"): toggle_timer(); s.tm, s.tm_i = True, time.time(); st.rerun()
+
+with f_right: # Bloque RIVAL (TM en la esquina)
+    c_f_r, c_tm_r = st.columns([1, 1.5])
+    with c_f_r:
+        st.button("F+", key="frp", use_container_width=True, on_click=lambda: setattr(s, 'fr', s.fr+1))
+        st.button("F-", key="frm", use_container_width=True, on_click=lambda: setattr(s, 'fr', max(0, s.fr-1)))
+    with c_tm_r:
+        if st.button("⏱️ TM RIVAL", key="tm_riv_btn", use_container_width=True): toggle_timer(); s.tm, s.tm_i = True, time.time(); st.rerun()
+
 st.markdown("</div>", unsafe_allow_html=True)
