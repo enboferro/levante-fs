@@ -4,9 +4,9 @@ import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v20.2 FINAL", layout="wide")
+st.set_page_config(page_title="LUD Match Control by Kike", layout="wide")
 
-# --- CSS ALTO CONTRASTE Y SIMETRÍA TOTAL ---
+# --- CSS ALTO CONTRASTE, SIMETRÍA Y TÍTULO ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;700;900&display=swap');
@@ -14,11 +14,22 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Roboto', sans-serif; background-color: #e0e0e0; overflow-x: hidden; }
     .block-container { padding: 0.1rem !important; max-width: 100% !important; }
 
+    /* TÍTULO SUPERIOR */
+    .app-title-container {
+        display: flex; align-items: center; justify-content: center; gap: 12px;
+        padding: 8px 0; background: transparent;
+    }
+    .app-title-text {
+        font-size: 1.4rem; font-weight: 900; color: #4B2E2A;
+        letter-spacing: 1px; text-transform: uppercase;
+    }
+
     .scoreboard-container {
         display: flex; align-items: center; justify-content: space-around;
-        background: #4B2E2A; padding: 5px; border-radius: 0 0 15px 15px;
+        background: #4B2E2A; padding: 5px; border-radius: 15px;
         color: #ffffff; box-shadow: 0 6px 15px rgba(0,0,0,0.4);
         border-bottom: 4px solid #000000;
+        margin-top: 5px;
     }
     .score-number { font-size: 4rem !important; font-weight: 900; line-height: 1; font-family: 'Roboto Mono', monospace; color: #ffffff; }
     .mini-stat { font-size: 0.85rem; color: #00f2ff; font-weight: 700; }
@@ -77,7 +88,7 @@ if 'js' not in st.session_state:
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v20.2")
+st_autorefresh(1000, key="f5_lud_v21")
 
 ah = time.time()
 tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -95,6 +106,14 @@ def toggle_timer():
         for j in s.js:
             if j["p"] and j["i"]:
                 d = now - j["i"]; j["tot"] += d; j["tt"] += d; j["i"] = None
+
+# --- TÍTULO Y ESCUDO ---
+st.markdown(f"""
+    <div class="app-title-container">
+        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/1200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png" width="40">
+        <div class="app-title-text">Match Control by Kike</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- UI SUPERIOR ---
 mv, sv = divmod(int(rem), 60)
@@ -163,19 +182,17 @@ for i, j in enumerate(s.js):
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-# --- FOOTER SIMÉTRICO ---
+# --- FOOTER ---
 st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
 f_left, f_mid, f_right = st.columns([2.5, 3, 2.5])
-
-with f_left: # Bloque LUD (TM en la esquina)
+with f_left:
     c_tm_l, c_f_l = st.columns([1.5, 1])
     with c_tm_l:
         if st.button("⏱️ TM LUD", key="tm_lud_btn", use_container_width=True): toggle_timer(); s.tm, s.tm_i = True, time.time(); st.rerun()
     with c_f_l:
         st.button("F+", key="flp", use_container_width=True, on_click=lambda: setattr(s, 'fl', s.fl+1))
         st.button("F-", key="flm", use_container_width=True, on_click=lambda: setattr(s, 'fl', max(0, s.fl-1)))
-
-with f_mid: # Bloque Disciplina y Portero
+with f_mid:
     c_t1, c_t2 = st.columns(2)
     with c_t1: # LUD
         with st.popover("🟨", use_container_width=True):
@@ -194,13 +211,11 @@ with f_mid: # Bloque Disciplina y Portero
     c_p1, c_p2 = st.columns(2)
     c_p1.button(f"🧤 {s.pm}", use_container_width=True, on_click=lambda: setattr(s, 'pm', s.pm+1))
     c_p2.button(f"👟 {s.pp}", use_container_width=True, on_click=lambda: setattr(s, 'pp', s.pp+1))
-
-with f_right: # Bloque RIVAL (TM en la esquina)
+with f_right:
     c_f_r, c_tm_r = st.columns([1, 1.5])
     with c_f_r:
         st.button("F+", key="frp", use_container_width=True, on_click=lambda: setattr(s, 'fr', s.fr+1))
         st.button("F-", key="frm", use_container_width=True, on_click=lambda: setattr(s, 'fr', max(0, s.fr-1)))
     with c_tm_r:
         if st.button("⏱️ TM RIVAL", key="tm_riv_btn", use_container_width=True): toggle_timer(); s.tm, s.tm_i = True, time.time(); st.rerun()
-
 st.markdown("</div>", unsafe_allow_html=True)
