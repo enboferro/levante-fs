@@ -5,9 +5,9 @@ import io
 from streamlit_autorefresh import st_autorefresh
 
 # Configuración de página
-st.set_page_config(page_title="LUD Match Control v28.1", layout="wide")
+st.set_page_config(page_title="LUD Match Control v28.2", layout="wide")
 
-# --- CSS INTEGRAL COMPACTO ---
+# --- CSS INTEGRAL PARA ALINEACIÓN PERFECTA ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;900&display=swap');
@@ -28,14 +28,27 @@ st.markdown("""
         font-weight: 900; font-size: 1rem; margin-bottom: 5px;
     }
 
-    /* Fichas Jugadores */
+    /* Fichas Jugadores con ALTURA FIJA para alineación */
     .player-name { font-size: 0.95rem !important; font-weight: 900 !important; color: #4B2E2A !important; text-transform: uppercase; margin-bottom: 0px; }
-    .card { border-radius: 8px; padding: 4px; text-align: center; border: 1px solid #999; margin-bottom: 2px; min-height: 85px; }
+    
+    .card { 
+        border-radius: 8px; 
+        padding: 5px; 
+        text-align: center; 
+        border: 1px solid #999; 
+        margin-bottom: 4px; 
+        height: 120px; /* Altura fija para todos */
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    
     .pista-portero { background-color: #008080 !important; color: white; border: 2px solid white; }
     .pista-verde { background-color: #00FF41 !important; color: #000; }
     .pista-naranja { background-color: #FF5E00 !important; color: white; }
     .pista-roja { background-color: #FF0000 !important; color: white; border: 2px solid #FFFF00; animation: blinker 0.8s linear infinite; }
     .banquillo { background-color: #D1D1D1 !important; color: #4B2E2A !important; }
+    
     @keyframes blinker { 50% { opacity: 0.4; } }
 
     /* Footer */
@@ -56,7 +69,7 @@ if 'js' not in st.session_state:
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v28_1")
+st_autorefresh(1000, key="f5_lud_v28_2")
 
 ah = time.time()
 tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -137,8 +150,13 @@ with t1:
             cl = "banquillo" if not j['p'] else ("pista-portero" if es_p else ("pista-verde" if cur < 240 else ("pista-naranja" if cur < 360 else "pista-roja")))
             
             st.markdown(f"<div class='card {cl}'><span class='player-name'>{j['n']}</span>", unsafe_allow_html=True)
+            
+            # Si es portero, dejamos el hueco central vacío para mantener la alineación
             if not es_p:
-                st.markdown(f"<div style='font-size:0.9rem; font-weight:900;'>{int(cur//60):02d}:{int(cur%60):02d}</div><div style='font-size:0.6rem;'>Σ {int(tot//60):02d}:{int(tot%60):02d} | R:{j['r']}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div><div style='font-size:0.9rem; font-weight:900;'>{int(cur//60):02d}:{int(cur%60):02d}</div><div style='font-size:0.6rem;'>Σ {int(tot//60):02d}:{int(tot%60):02d} | R:{j['r']}</div></div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div style='height:40px;'></div>", unsafe_allow_html=True) # Hueco fantasma
+            
             if st.button("🔄", key=f"bt_{i}", use_container_width=True, disabled=s.finalizado):
                 if not j["p"]:
                     j["p"] = True
