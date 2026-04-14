@@ -4,7 +4,7 @@ import time
 import io
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v27.0", layout="wide")
+st.set_page_config(page_title="LUD Match Control v27.1", layout="wide")
 
 # --- CSS INTEGRAL ---
 st.markdown("""
@@ -47,11 +47,12 @@ if 'js' not in st.session_state:
         "al": 0, "rl": 0, "ar": 0, "rr": 0, "ml": 0, "mr": 0, "fl": 0, "fr": 0, 
         "ta": 0.0, "ic": None, "on": False, "rv": "RIVAL", "tm": False, "tm_i": None,
         "analisis_goles": [],
-        "periodo": "1ª PARTE" # <--- Control de periodo
+        "periodo": "1ª PARTE",
+        "partido_finalizado": False
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v27")
+st_autorefresh(1000, key="f5_lud_v27.1")
 
 ah = time.time()
 tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -74,27 +75,40 @@ def capturar_cuarteto_gol(tipo, detalle):
     })
 
 def toggle_timer():
+    if s.partido_finalizado: return
     if not s.on:
-        s.ic, s.on = time.time(), True
-        for j in s.js: 
-            if j["p"]: j["i"] = s.ic
+        if tr_total < 1200:
+            s.ic, s.on = time.time(), True
+            for j in s.js: 
+                if j["p"]: j["i"] = s.ic
     else:
         now = time.time(); s.ta += now - s.ic; s.on, s.ic = False, None
         for j in s.js:
             if j["p"] and j["i"]: d = now-j["i"]; j["tot"]+=d; j["tt"]+=d; j["i"]=None
 
 def finalizar_parte():
-    # Parar todo
-    if s.on: toggle_timer()
-    # Registrar evento de fin
-    s.eventos.append({'Tiempo': 'FIN', 'Evento': f'🏁 FINALIZADA {s.periodo}'})
-    # Cambiar a 2ª parte y resetear reloj
+    # 1. Parar cronómetros
+    if s.on:
+        now = time.time()
+        s.ta += now - s.ic
+        s.on, s.ic = False, None
+        for j in s.js:
+            if j["p"] and j["i"]:
+                d = now - j["i"]; j["tot"] += d; j["tt"] += d; j["i"] = None
+    
+    # 2. Registrar evento
+    s.eventos.append({'Tiempo': min_act, 'Evento': f'🏁 FIN {s.periodo}'})
+    
+    # 3. Lógica de cambio o cierre
     if s.periodo == "1ª PARTE":
         s.periodo = "2ª PARTE"
         s.ta = 0.0
-        # Opcional: Resetear faltas si quieres (Futsal las resetea)
         s.fl = 0
         s.fr = 0
+    else:
+        s.partido_finalizado = True
+        s.periodo = "PARTIDO FINALIZADO"
+    
     st.rerun()
 
 # --- VISTA PRINCIPAL ---
@@ -118,8 +132,8 @@ with tab1:
         """, unsafe_allow_html=True)
 
     c_time = st.columns([2, 1])
-    if c_time[0].button("▶ START / STOP ⏸", key="main_timer_btn", use_container_width=True): toggle_timer(); st.rerun()
-    if c_time[1].button(f"🏁 FIN {s.periodo}", key="fin_parte_btn", use_container_width=True): finalizar_parte()
+    if c_time[0].button("▶ START / STOP ⏸", key="main_timer_btn", use_container_width=True, disabled=s.partido_finalizado): toggle_timer(); st.rerun()
+    if c_time[1].button(f"🏁 FINALIZAR", key="fin_parte_btn", use_container_width=True, disabled=s.partido_finalizado): finalizar_parte()
 
     c_goles = st.columns([1,1,1,1])
     with c_goles[0]:
@@ -144,7 +158,7 @@ with tab1:
             st.markdown(f"<div class='{cl}'>", unsafe_allow_html=True)
             mc, vc = divmod(int(cur_sec), 60); mt, vt = divmod(int(tot_sec), 60)
             st.markdown(f"<div class='player-name'>{j['n']}</div><div style='font-size:1.2rem; font-weight:900;'>{mc:02d}:{vc:02d}</div><div style='font-size:0.65rem;'>Σ{mt:02d}:{vt:02d} | R:{j['r']}</div>", 1)
-            if st.button("🔄", key=f"rot_btn_{i}", use_container_width=True):
+            if st.button("🔄", key=f"rot_btn_{i}", use_container_width=True, disabled=s.partido_finalizado):
                 if not j["p"] and sum(1 for x in s.js if x["p"]) < 5:
                     j["p"], j["i"], j["r"] = True, (ah if s.on else None), j["r"]+1; j["tt"] = 0.0
                 elif j["p"]:
@@ -216,7 +230,7 @@ with tab4:
     st.download_button(
         label="📥 DESCARGAR INFORME PARTIDO COMPLETO (.xlsx)",
         data=buffer.getvalue(),
-        file_name=f"LUD_Partido_Completo_vs_{s.rv}.xlsx",
+        file_name=f"LUD_Partido_Final_vs_{s.rv}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         use_container_width=True,
         key="global_download_excel"
