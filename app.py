@@ -6,7 +6,7 @@ from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
 # Configuración de página
-st.set_page_config(page_title="LUD Match Control v29.0", layout="wide")
+st.set_page_config(page_title="LUD Match Control v29.1", layout="wide")
 
 # --- CSS INTEGRAL ---
 st.markdown("""
@@ -54,7 +54,7 @@ if 'js' not in st.session_state:
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v29")
+st_autorefresh(1000, key="f5_lud_v29_1")
 
 ah = time.time()
 tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -126,6 +126,10 @@ with t1:
         if st.button("🗑️ RESET"): st.session_state.clear(); st.rerun()
 
     st.markdown("---")
+    
+    # Contador de jugadores de campo actualmente en pista
+    jugadores_campo_pista = sum(1 for j in s.js if j['p'] and j['n'] not in ["Serra", "Jose"])
+    
     cols = st.columns(5)
     for i, j in enumerate(s.js):
         with cols[i%5]:
@@ -138,10 +142,15 @@ with t1:
                 st.markdown(f"<div><div style='font-size:0.9rem; font-weight:900;'>{int(cur//60):02d}:{int(cur%60):02d}</div><div style='font-size:0.6rem;'>Σ {int(tot//60):02d}:{int(tot%60):02d} | R:{j['r']}</div></div>", unsafe_allow_html=True)
             else:
                 st.markdown("<div style='height:40px;'></div>", unsafe_allow_html=True)
+            
+            # REGLA DE 4+1: Solo permitimos entrar si es portero o si hay menos de 4 jugadores de campo
+            puedo_entrar = es_p or jugadores_campo_pista < 4
+            
             if st.button("🔄", key=f"bt_{i}", use_container_width=True, disabled=s.finalizado):
                 if not j["p"]:
-                    j["p"] = True
-                    if not es_p: j["i"], j["r"], j["tt"] = (ah if s.on else None), j["r"]+1, 0.0
+                    if puedo_entrar:
+                        j["p"] = True
+                        if not es_p: j["i"], j["r"], j["tt"] = (ah if s.on else None), j["r"]+1, 0.0
                 else:
                     if not es_p and s.on and j["i"]: d_t = ah - j["i"]; j["tot"] += d_t; j["tt"] += d_t
                     j["p"], j["i"] = False, None
@@ -151,7 +160,7 @@ with t1:
     st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
     f_l, f_m, f_r = st.columns([2, 4, 2])
     with f_l:
-        st.button("⏱️ TM LUD", key="tml", on_click=lambda: (toggle_timer(), setattr(s, 'tm', True), setattr(s, 'tm_i', time.time())))
+        if st.button("⏱️ TM LUD", key="tml", use_container_width=True): toggle_timer(); s.tm, s.tm_i = True, time.time(); s.eventos.append({'Tiempo':min_act,'Evento':'⏱️ TM LUD'}); st.rerun()
         c_f1 = st.columns(2)
         c_f1[0].button("F+ LUD", on_click=lambda: setattr(s, 'fl', s.fl+1))
         c_f1[1].button("F- LUD", on_click=lambda: setattr(s, 'fl', max(0, s.fl-1)))
@@ -178,7 +187,7 @@ with t1:
             c_p[0].button("✅ ", key="pok", on_click=lambda: setattr(s, 'pp_ok', s.pp_ok+1))
             c_p[1].button("❌ ", key="per", on_click=lambda: setattr(s, 'pp_err', s.pp_err+1))
     with f_r:
-        st.button(f"⏱️ TM {s.rv[:3]}", key="tmr", on_click=lambda: (toggle_timer(), setattr(s, 'tm', True), setattr(s, 'tm_i', time.time())))
+        if st.button(f"⏱️ TM {s.rv[:3]}", key="tmr", use_container_width=True): toggle_timer(); s.tm, s.tm_i = True, time.time(); s.eventos.append({'Tiempo':min_act,'Evento':f'⏱️ TM {s.rv}'}); st.rerun()
         c_f2 = st.columns(2)
         c_f2[0].button(f"F+ {s.rv[:3]}", on_click=lambda: setattr(s, 'fr', s.fr+1))
         c_f2[1].button(f"F- {s.rv[:3]}", on_click=lambda: setattr(s, 'fr', max(0, s.fr-1)))
