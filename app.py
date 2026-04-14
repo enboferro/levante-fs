@@ -5,9 +5,9 @@ import io
 from streamlit_autorefresh import st_autorefresh
 
 # Configuración inicial
-st.set_page_config(page_title="LUD Match Control v27.2", layout="wide")
+st.set_page_config(page_title="LUD Match Control v27.3", layout="wide")
 
-# --- CSS ESTABLE ---
+# --- CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;700;900&display=swap');
@@ -29,11 +29,11 @@ st.markdown("""
     .score-number { font-size: 3.5rem !important; font-weight: 900; font-family: 'Roboto Mono'; line-height: 1; }
     .stadium-clock { font-family: 'Roboto Mono'; font-size: 4rem !important; font-weight: 700; text-align: center; line-height: 1; }
     .player-name { font-size: 1.1rem !important; font-weight: 900 !important; color: #4B2E2A !important; text-transform: uppercase; margin-bottom: 2px; }
-    .pista-portero { background-color: #008080 !important; color: white; border-radius: 8px; padding: 2px; text-align: center; font-weight: 900; border: 2px solid white; }
+    .pista-portero { background-color: #008080 !important; color: white; border-radius: 8px; padding: 10px 2px; text-align: center; font-weight: 900; border: 2px solid white; }
     .pista-verde { background-color: #00FF41 !important; color: #000; border-radius: 8px; padding: 2px; text-align: center; font-weight: 900; }
     .pista-naranja { background-color: #FF5E00 !important; color: white !important; border-radius: 8px; padding: 2px; text-align: center; font-weight: 900; border: 1px solid white; }
     .pista-roja { background-color: #FF0000 !important; color: white !important; border-radius: 8px; padding: 2px; text-align: center; font-weight: 900; border: 2px solid #FFFF00; animation: blinker 0.8s linear infinite; }
-    .banquillo { background-color: #444444 !important; color: white; border-radius: 8px; padding: 2px; text-align: center; opacity: 0.9; }
+    .banquillo { background-color: #444444 !important; color: white; border-radius: 8px; padding: 10px 2px; text-align: center; opacity: 0.9; }
     @keyframes blinker { 50% { opacity: 0.4; } }
     .footer-control { background-color: #ffffff; padding: 8px; border-radius: 15px 15px 0 0; border-top: 5px solid #4B2E2A; margin-top: 10px; }
     </style>
@@ -51,7 +51,7 @@ if 'js' not in st.session_state:
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v27_2")
+st_autorefresh(1000, key="f5_lud_v27_3")
 
 ah = time.time()
 tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -67,12 +67,12 @@ def toggle_timer():
         if tr_total < 1200:
             s.ic, s.on = now, True
             for j in s.js: 
-                if j["p"]: j["i"] = now
+                if j["p"] and j["n"] not in ["Serra", "Jose"]: j["i"] = now
     else:
         s.ta += now - s.ic
         s.on, s.ic = False, None
         for j in s.js:
-            if j["p"] and j["i"]:
+            if j["p"] and j["i"] and j["n"] not in ["Serra", "Jose"]:
                 d = now - j["i"]; j["tot"] += d; j["tt"] += d; j["i"] = None
 
 def finalizar_fase():
@@ -137,14 +137,32 @@ with t1:
     cols = st.columns(6)
     for i, j in enumerate(s.js):
         with cols[i%6]:
-            cur = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-            cl = "banquillo" if not j['p'] else ("pista-portero" if j['n'] in ["Serra", "Jose"] else ("pista-verde" if cur < 240 else ("pista-naranja" if cur < 360 else "pista-roja")))
-            st.markdown(f"<div class='{cl}'><div class='player-name'>{j['n']}</div><div style='font-size:1.1rem; font-weight:900;'>{int(cur//60):02d}:{int(cur%60):02d}</div><div style='font-size:0.6rem;'>R:{j['r']}</div>", 1)
+            es_portero = j['n'] in ["Serra", "Jose"]
+            
+            if not j['p']:
+                cl = "banquillo"
+            elif es_portero:
+                cl = "pista-portero"
+            else:
+                cur = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
+                cl = "pista-verde" if cur < 240 else ("pista-naranja" if cur < 360 else "pista-roja")
+            
+            st.markdown(f"<div class='{cl}'><div class='player-name'>{j['n']}</div>", unsafe_allow_html=True)
+            
+            if not es_portero:
+                cur = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
+                st.markdown(f"<div style='font-size:1.1rem; font-weight:900;'>{int(cur//60):02d}:{int(cur%60):02d}</div><div style='font-size:0.6rem;'>R:{j['r']}</div>", unsafe_allow_html=True)
+            
             if st.button("🔄", key=f"bt_{i}", use_container_width=True, disabled=s.finalizado):
-                if not j["p"] and sum(1 for x in s.js if x["p"]) < 5:
-                    j["p"], j["i"], j["r"] = True, (ah if s.on else None), j["r"]+1; j["tt"] = 0.0
-                elif j["p"]:
-                    if s.on and j["i"]: d = ah-j["i"]; j["tot"]+=d; j["tt"]+=d
+                if not j["p"]:
+                    j["p"] = True
+                    if not es_portero:
+                        j["i"] = (ah if s.on else None)
+                        j["r"] += 1
+                        j["tt"] = 0.0
+                else:
+                    if not es_portero and s.on and j["i"]:
+                        d = ah - j["i"]; j["tot"] += d; j["tt"] += d
                     j["p"], j["i"] = False, None
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
@@ -184,6 +202,6 @@ with t4:
         pd.DataFrame({"Métrica": ["Goles LUD", "Goles RIV", "Faltas LUD", "Faltas RIV"], "Val": [s.ml, s.mr, s.fl, s.fr]}).to_excel(writer, sheet_name='Resumen', index=False)
         if s.eventos: pd.DataFrame(s.eventos).to_excel(writer, sheet_name='Historial', index=False)
         if s.analisis_goles: pd.DataFrame(s.analisis_goles).to_excel(writer, sheet_name='Goles', index=False)
-        data_j = [{"Jugador": x["n"], "Min": f"{int(x['tot']//60):02d}:{int(x['tot']%60):02d}", "R": x["r"]} for x in s.js]
+        data_j = [{"Jugador": x["n"], "Min": f"{int(x['tot']//60):02d}:{int(x['tot']%60):02d}", "R": x["r"]} for x in s.js if x["n"] not in ["Serra", "Jose"]]
         pd.DataFrame(data_j).to_excel(writer, sheet_name='Jugadores', index=False)
     st.download_button(label="📥 DESCARGAR EXCEL", data=buf.getvalue(), file_name=f"LUD_{s.rv}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
