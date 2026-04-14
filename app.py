@@ -4,7 +4,7 @@ import time
 import io
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v26.0 FINAL", layout="wide")
+st.set_page_config(page_title="LUD Match Control v26.1 FINAL", layout="wide")
 
 # --- CSS INTEGRAL ---
 st.markdown("""
@@ -44,7 +44,7 @@ if 'js' not in st.session_state:
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v26")
+st_autorefresh(1000, key="f5_lud_v26.1")
 
 # --- LÓGICA DE TIEMPO ---
 ah = time.time()
@@ -84,7 +84,7 @@ def toggle_timer():
             if j["p"] and j["i"]: d = now-j["i"]; j["tot"]+=d; j["tt"]+=d; j["i"]=None
 
 # --- PESTAÑAS ---
-tab1, tab_hist, tab_tact, tab_stats = st.tabs(["🎮 PARTIDO", "📜 LINEA DE TIEMPO", "⚽ DATA GOLES", "📊 EXPORTAR TODO"])
+tab1, tab_hist, tab_tact, tab_export = st.tabs(["🎮 PARTIDO", "📜 HISTORIAL", "⚽ GOLES", "📊 EXCEL TOTAL"])
 
 with tab1:
     st.markdown(f'<div style="text-align:center; padding:5px;"><img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/1200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png" width="35"><span style="font-size:1.2rem; font-weight:900; color:#4B2E2A; margin-left:10px;">MATCH CONTROL BY KIKE</span></div>', unsafe_allow_html=True)
@@ -167,40 +167,46 @@ with tab1:
     st.markdown("</div>", unsafe_allow_html=True)
 
 with tab_hist:
-    st.table(pd.DataFrame(s.eventos)) if s.eventos else st.info("Sin eventos")
+    if s.eventos: st.table(pd.DataFrame(s.eventos))
+    else: st.info("Sin eventos registrados")
 
 with tab_tact:
-    st.table(pd.DataFrame(s.analisis_goles)) if s.analisis_goles else st.info("Sin goles")
+    if s.analisis_goles: st.table(pd.DataFrame(s.analisis_goles))
+    else: st.info("Sin goles registrados")
 
-with tab_stats:
-    st.subheader("📊 Generar Informe Total del Partido")
-    st.write("Pulsa el botón para compilar todos los datos en un archivo Excel profesional.")
-    
-    # LÓGICA DE EXPORTACIÓN TOTAL
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        # 1. Eventos
-        pd.DataFrame(s.eventos).to_excel(writer, index=False, sheet_name='Linea de Tiempo')
-        # 2. Análisis de Goles
-        pd.DataFrame(s.analisis_goles).to_excel(writer, index=False, sheet_name='Analisis de Goles')
-        # 3. Datos Jugadores
-        data_j = []
-        for j in s.js:
-            ts = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-            m, sc = divmod(int(ts), 60)
-            data_j.append({"Jugador": j["n"], "Tiempo Total": f"{m:02d}:{sc:02d}", "Rotaciones": j["r"]})
-        pd.DataFrame(data_j).to_excel(writer, index=False, sheet_name='Estadisticas Jugadores')
-        # 4. Portería
-        def p(o,e): t=o+e; return f"{(o/t*100):.1f}%" if t>0 else "0%"
-        data_p = [
-            {"Tipo": "Mano", "Aciertos": s.pm_ok, "Fallos": s.pm_err, "Efectividad": p(s.pm_ok, s.pm_err)},
-            {"Tipo": "Pie", "Aciertos": s.pp_ok, "Fallos": s.pp_err, "Efectividad": p(s.pp_ok, s.pp_err)}
-        ]
-        pd.DataFrame(data_p).to_excel(writer, index=False, sheet_name='Porteria')
+with tab_export:
+    st.subheader("📥 Exportación Completa de Datos")
+    if st.button("🚀 PREPARAR DESCARGA EXCEL"):
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # 1. Resumen Partido
+            resumen = {
+                "Dato": ["Resultado LUD", "Resultado Rival", "Faltas LUD", "Faltas Rival", "Amarillas LUD", "Rojas LUD", "Amarillas RIV", "Rojas RIV"],
+                "Valor": [s.ml, s.mr, s.fl, s.fr, s.al, s.rl, s.ar, s.rr]
+            }
+            pd.DataFrame(resumen).to_excel(writer, index=False, sheet_name='Marcador Final')
+            # 2. Eventos
+            pd.DataFrame(s.eventos).to_excel(writer, index=False, sheet_name='Cronologia')
+            # 3. Goles
+            pd.DataFrame(s.analisis_goles).to_excel(writer, index=False, sheet_name='Analisis Cuartetos')
+            # 4. Jugadores
+            data_j = []
+            for j in s.js:
+                ts = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
+                m, sc = divmod(int(ts), 60)
+                data_j.append({"Jugador": j["n"], "Tiempo Total": f"{m:02d}:{sc:02d}", "Rotaciones": j["r"]})
+            pd.DataFrame(data_j).to_excel(writer, index=False, sheet_name='Estadisticas Jugadores')
+            # 5. Portería
+            def p(o,e): t=o+e; return f"{(o/t*100):.1f}%" if t>0 else "0%"
+            data_p = [
+                {"Tipo": "Mano", "Aciertos": s.pm_ok, "Fallos": s.pm_err, "Efectividad": p(s.pm_ok, s.pm_err)},
+                {"Tipo": "Pie", "Aciertos": s.pp_ok, "Fallos": s.pp_err, "Efectividad": p(s.pp_ok, s.pp_err)}
+            ]
+            pd.DataFrame(data_p).to_excel(writer, index=False, sheet_name='Porteria')
 
-    st.download_button(
-        label="📥 DESCARGAR EXCEL TOTAL",
-        data=output.getvalue(),
-        file_name=f"Informe_Partido_LUD_vs_{s.rv}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+        st.download_button(
+            label="✅ DESCARGAR INFORME EXCEL (.xlsx)",
+            data=output.getvalue(),
+            file_name=f"LUD_Partido_vs_{s.rv}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
