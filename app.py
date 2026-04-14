@@ -3,9 +3,9 @@ import pandas as pd
 import time
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v23.2 FIXED", layout="wide")
+st.set_page_config(page_title="LUD Match Control v23.3", layout="wide")
 
-# --- CSS INTEGRAL MEJORADO VISUALMENTE ---
+# --- CSS INTEGRAL ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;700;900&display=swap');
@@ -36,7 +36,6 @@ st.markdown("""
 
     .footer-control { background-color: #ffffff; padding: 8px; border-radius: 15px 15px 0 0; border-top: 5px solid #4B2E2A; margin-top: 10px; }
     
-    /* ESTILOS BOTONES PORTERÍA INTEGRADOS (v23.2) */
     div.stButton > button[key$="_ok"] { background-color: #d4edda !important; color: #155724 !important; border: 2px solid #155724 !important; font-size: 1.1rem !important; border-radius: 10px !important; }
     div.stButton > button[key$="_err"] { background-color: #f8d7da !important; color: #721c24 !important; border: 2px solid #721c24 !important; font-size: 1.1rem !important; border-radius: 10px !important; }
     .gk-block-title { font-size: 0.75rem; font-weight: bold; text-align: center; color: #4B2E2A; margin-bottom: 2px; text-transform: uppercase; }
@@ -58,7 +57,7 @@ if 'js' not in st.session_state:
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v23.2")
+st_autorefresh(1000, key="f5_lud_v23.3")
 
 # --- LÓGICA ---
 ah = time.time()
@@ -110,18 +109,18 @@ with tab1:
         """, unsafe_allow_html=True)
 
     c_time = st.columns(3)
-    for col_key in ["tm_l", "tm_m", "tm_r"]:
-        if c_time[["tm_l", "tm_m", "tm_r"].index(col_key)].button("▶ START / STOP ⏸", key=col_key): toggle_timer(); st.rerun()
+    for idx, col_key in enumerate(["tm_l", "tm_m", "tm_r"]):
+        if c_time[idx].button("▶ START / STOP ⏸", key=col_key): toggle_timer(); st.rerun()
 
     c_goles = st.columns([1,1,1,1])
     with c_goles[0]:
         with st.popover("⚽ GOL LUD", use_container_width=True):
             p_gol = st.selectbox("Autor", [j['n'] for j in s.js], key="sb_gol_lud")
-            if st.button("GOOOL!"): s.ml += 1; capturar_cuarteto("GOL LUD", p_gol); s.eventos.append({'min':min_act,'info':f'⚽{p_gol}'}); st.rerun()
+            if st.button("GOOOL!", key="btn_confirm_lud"): s.ml += 1; capturar_cuarteto("GOL LUD", p_gol); s.eventos.append({'min':min_act,'info':f'⚽{p_gol}'}); st.rerun()
     with c_goles[1]:
         with st.popover("⚽ GOL RIVAL", use_container_width=True):
             d_gol = st.number_input("Dorsal", 1, 99, key="ni_gol_riv")
-            if st.button("GOL RIVAL"): s.mr += 1; capturar_cuarteto("GOL RIVAL", f"#{d_gol}"); s.eventos.append({'min':min_act,'info':f'⚽#{d_gol} RIV'}); st.rerun()
+            if st.button("GOL RIVAL", key="btn_confirm_riv"): s.mr += 1; capturar_cuarteto("GOL RIVAL", f"#{d_gol}"); s.eventos.append({'min':min_act,'info':f'⚽#{d_gol} RIV'}); st.rerun()
     with c_goles[2]: s.rv = st.text_input("Rival", s.rv, label_visibility="collapsed").upper()
     with c_goles[3]: 
         if st.button("🗑️ RESET"): st.session_state.clear(); st.rerun()
@@ -145,11 +144,11 @@ with tab1:
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- FOOTER SIMÉTRICO RESTAURADO Y MEJORADO (v23.2) ---
+    # --- FOOTER ---
     st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
     f_l, f_m, f_r = st.columns([2.5, 3.5, 2.5])
     
-    with f_l: # LUD (Simétrico)
+    with f_l: 
         c_tml, c_fl = st.columns([1.5, 1])
         with c_tml:
             if st.button("⏱️ TM LUD", key="bt_tml", use_container_width=True): toggle_timer(); s.tm, s.tm_i = True, time.time(); capturar_cuarteto("TM LUD", "Iniciado"); st.rerun()
@@ -157,43 +156,38 @@ with tab1:
             st.button("F+", key="bt_flp", use_container_width=True, on_click=lambda: setattr(s, 'fl', s.fl+1))
             st.button("F-", key="bt_flm", use_container_width=True, on_click=lambda: setattr(s, 'fl', max(0, s.fl-1)))
             
-    with f_m: # Bloque Central: Disciplina (Restaurada v22.1) + Portería (Iconos Integrados v23.2)
+    with f_m: 
         c_dis, c_gk = st.columns([1.1, 1])
-        
-        with c_dis: # Disciplina Directa (v22.1 Style)
-            st.markdown("<div style='text-align:center; font-size:0.75rem; font-weight:bold; text-transform:uppercase;'>Tarjetas</div>", unsafe_allow_html=True)
+        with c_dis: 
+            st.markdown("<div style='text-align:center; font-size:0.75rem; font-weight:bold;'>TARJETAS</div>", unsafe_allow_html=True)
             col_d_l, col_d_r = st.columns(2)
-            with col_d_l: # LUD
+            with col_d_l:
                 with st.popover("L🟨", use_container_width=True):
                     p_y = st.selectbox("J", [j['n'] for j in s.js], key="sb_y_lud")
-                    if st.button("OK 🟨"): s.al+=1; capturar_cuarteto("🟨 LUD", p_y); s.eventos.append({'min':min_act,'info':f'🟨{p_y}'}); st.rerun()
+                    if st.button("OK 🟨", key="btn_ok_y_lud"): s.al+=1; capturar_cuarteto("🟨 LUD", p_y); s.eventos.append({'min':min_act,'info':f'🟨{p_y}'}); st.rerun()
                 with st.popover("L🟥", use_container_width=True):
                     p_r = st.selectbox("J", [j['n'] for j in s.js], key="sb_r_lud")
-                    if st.button("OK 🟥"): s.rl+=1; capturar_cuarteto("🟥 LUD", p_r); s.eventos.append({'min':min_act,'info':f'🟥{p_r}'}); st.rerun()
-            with col_d_r: # RIV
+                    if st.button("OK 🟥", key="btn_ok_r_lud"): s.rl+=1; capturar_cuarteto("🟥 LUD", p_r); s.eventos.append({'min':min_act,'info':f'🟥{p_r}'}); st.rerun()
+            with col_d_r:
                 with st.popover("R🟨", use_container_width=True):
                     d_y = st.number_input("D", 1, 99, key="ni_y_riv")
-                    if st.button("OK 🟨"): s.ar+=1; capturar_cuarteto("🟨 RIV", f"#{d_y}"); s.eventos.append({'min':min_act,'info':f'🟨#{d_y} RIV'}); st.rerun()
+                    if st.button("OK 🟨", key="btn_ok_y_riv"): s.ar+=1; capturar_cuarteto("🟨 RIV", f"#{d_y}"); s.eventos.append({'min':min_act,'info':f'🟨#{d_y} RIV'}); st.rerun()
                 with st.popover("R🟥", use_container_width=True):
-                    d_r = st.number_input("D", 1, 99, key="rriv")
-                    if st.button("OK 🟥"): s.rr+=1; capturar_cuarteto("🟥 RIV", f"#{d_r}"); s.eventos.append({'min':min_act,'info':f'🟥#{d_r} RIV'}); st.rerun()
+                    d_r = st.number_input("D", 1, 99, key="ni_r_riv")
+                    if st.button("OK 🟥", key="btn_ok_r_riv"): s.rr+=1; capturar_cuarteto("🟥 RIV", f"#{d_r}"); s.eventos.append({'min':min_act,'info':f'🟥#{d_r} RIV'}); st.rerun()
 
-        with c_gk: # Portería con Iconos INTEGRADOS en botones (v23.2)
+        with c_gk:
             st.markdown('<div class="gk-block-title">Saques</div>', unsafe_allow_html=True)
-            
-            # Fila Mano
             st.markdown('<div class="gk-stat-total-v2">Mano 🧤</div>', unsafe_allow_html=True)
             c_m = st.columns(2)
             c_m[0].button(f"✅ ({s.pm_ok})", key="gk_m_ok", use_container_width=True, on_click=lambda: setattr(s, 'pm_ok', s.pm_ok+1))
             c_m[1].button(f"❌ ({s.pm_err})", key="gk_m_err", use_container_width=True, on_click=lambda: setattr(s, 'pm_err', s.pm_err+1))
-            
-            # Fila Pie
             st.markdown('<div class="gk-stat-total-v2">Pie 👟</div>', unsafe_allow_html=True)
             c_p = st.columns(2)
             c_p[0].button(f"✅ ({s.pp_ok})", key="gk_p_ok", use_container_width=True, on_click=lambda: setattr(s, 'pp_ok', s.pp_ok+1))
             c_p[1].button(f"❌ ({s.pp_err})", key="gk_p_err", use_container_width=True, on_click=lambda: setattr(s, 'pp_err', s.pp_err+1))
 
-    with f_r: # RIVAL (Simétrico)
+    with f_r: 
         c_fr, c_tmr = st.columns([1, 1.5])
         with c_fr:
             st.button("F+", key="bt_frp", use_container_width=True, on_click=lambda: setattr(s, 'fr', s.fr+1))
@@ -204,17 +198,12 @@ with tab1:
 
 with tab2:
     st.subheader("🧤 Análisis de Portería")
-    
     def calc_perc(ok, err):
         total = ok + err
         return f"{(ok / total * 100):.1f}%" if total > 0 else "0.0%"
-
     col_stats_p1, col_stats_p2 = st.columns(2)
-    with col_stats_p1:
-        st.metric("🧤 Efectividad Saque MANO", calc_perc(s.pm_ok, s.pm_err), f"OK: {s.pm_ok} | X: {s.pm_err}")
-    with col_stats_p2:
-        st.metric("👟 Efectividad Saque PIE", calc_perc(s.pp_ok, s.pp_err), f"OK: {s.pp_ok} | X: {s.pp_err}")
-
+    with col_stats_p1: st.metric("🧤 Efectividad Saque MANO", calc_perc(s.pm_ok, s.pm_err), f"OK: {s.pm_ok} | X: {s.pm_err}")
+    with col_stats_p2: st.metric("👟 Efectividad Saque PIE", calc_perc(s.pp_ok, s.pp_err), f"OK: {s.pp_ok} | X: {s.pp_err}")
     st.markdown("---")
     st.subheader("📋 Registro Táctico de Cuartetos")
     if s.analisis_tactico:
