@@ -4,7 +4,7 @@ import time
 import io
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v26.2 PRO", layout="wide")
+st.set_page_config(page_title="LUD Match Control v26.3 PRO", layout="wide")
 
 # --- CSS INTEGRAL ---
 st.markdown("""
@@ -44,7 +44,7 @@ if 'js' not in st.session_state:
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v26.2")
+st_autorefresh(1000, key="f5_lud_v26.3")
 
 ah = time.time()
 tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
@@ -85,20 +85,20 @@ with tab1:
     st.markdown(f"""<div class="scoreboard-container"><div style="text-align:center;"><div class="score-number">{s.ml}</div><div style="font-size:0.8rem; font-weight:900;">LEVANTE UD</div></div><div class="stadium-clock" style="color: {'#FF0000' if rem <= 0 else '#FFFFFF'};">{timer_display}</div><div style="text-align:center;"><div class="score-number">{s.mr}</div><div style="font-size:0.8rem; font-weight:900;">{s.rv[:8]}</div></div></div>""", unsafe_allow_html=True)
 
     c_time = st.columns(3)
-    if c_time[1].button("▶ START / STOP ⏸", use_container_width=True): toggle_timer(); st.rerun()
+    if c_time[1].button("▶ START / STOP ⏸", key="main_timer_btn", use_container_width=True): toggle_timer(); st.rerun()
 
     c_goles = st.columns([1,1,1,1])
     with c_goles[0]:
         with st.popover("⚽ GOL LUD", use_container_width=True):
-            p_gol = st.selectbox("Autor", [j['n'] for j in s.js])
-            if st.button("GOOOL!"): s.ml += 1; capturar_cuarteto_gol("GOL LUD", p_gol); s.eventos.append({'T':min_act,'E':f'⚽ GOL LUD ({p_gol})'}); st.rerun()
+            p_gol = st.selectbox("Autor", [j['n'] for j in s.js], key="sel_gol_lud")
+            if st.button("GOOOL!", key="btn_gol_lud_ok"): s.ml += 1; capturar_cuarteto_gol("GOL LUD", p_gol); s.eventos.append({'T':min_act,'E':f'⚽ GOL LUD ({p_gol})'}); st.rerun()
     with c_goles[1]:
         with st.popover("⚽ GOL RIVAL", use_container_width=True):
-            d_gol = st.number_input("Dorsal", 1, 99)
-            if st.button("GOL RIVAL"): s.mr += 1; capturar_cuarteto_gol("GOL RIVAL", f"#{d_gol}"); s.eventos.append({'T':min_act,'E':f'⚽ GOL RIVAL (#{d_gol})'}); st.rerun()
-    with c_goles[2]: s.rv = st.text_input("Rival", s.rv, label_visibility="collapsed").upper()
+            d_gol = st.number_input("Dorsal", 1, 99, key="num_gol_riv")
+            if st.button("GOL RIVAL", key="btn_gol_riv_ok"): s.mr += 1; capturar_cuarteto_gol("GOL RIVAL", f"#{d_gol}"); s.eventos.append({'T':min_act,'E':f'⚽ GOL RIVAL (#{d_gol})'}); st.rerun()
+    with c_goles[2]: s.rv = st.text_input("Rival", s.rv, label_visibility="collapsed", key="in_rival_name").upper()
     with c_goles[3]: 
-        if st.button("🗑️ RESET"): st.session_state.clear(); st.rerun()
+        if st.button("🗑️ RESET", key="btn_global_reset"): st.session_state.clear(); st.rerun()
 
     st.markdown("---")
     cols = st.columns(6)
@@ -110,7 +110,7 @@ with tab1:
             st.markdown(f"<div class='{cl}'>", unsafe_allow_html=True)
             mc, vc = divmod(int(cur_sec), 60); mt, vt = divmod(int(tot_sec), 60)
             st.markdown(f"<div class='player-name'>{j['n']}</div><div style='font-size:1.2rem; font-weight:900;'>{mc:02d}:{vc:02d}</div><div style='font-size:0.65rem;'>Σ{mt:02d}:{vt:02d} | R:{j['r']}</div>", 1)
-            if st.button("🔄", key=f"r_{i}", use_container_width=True):
+            if st.button("🔄", key=f"rot_btn_{i}", use_container_width=True):
                 if not j["p"] and sum(1 for x in s.js if x["p"]) < 5:
                     j["p"], j["i"], j["r"] = True, (ah if s.on else None), j["r"]+1; j["tt"] = 0.0
                 elif j["p"]:
@@ -122,29 +122,29 @@ with tab1:
     st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
     f_l, f_m, f_r = st.columns([2, 4, 2])
     with f_l:
-        if st.button("⏱️ TM LUD", use_container_width=True): toggle_timer(); s.tm, s.tm_i = True, time.time(); s.eventos.append({'T':min_act,'E':'⏱️ TM LUD'}); st.rerun()
+        if st.button("⏱️ TM LUD", key="tm_lud_footer", use_container_width=True): toggle_timer(); s.tm, s.tm_i = True, time.time(); s.eventos.append({'T':min_act,'E':'⏱️ TM LUD'}); st.rerun()
         st.write(f"Faltas LUD: {s.fl}")
-        c_f = st.columns(2); c_f[0].button("F+", on_click=lambda: setattr(s, 'fl', s.fl+1)); c_f[1].button("F-", on_click=lambda: setattr(s, 'fl', max(0, s.fl-1)))
+        c_f = st.columns(2); c_f[0].button("F+", key="flp", on_click=lambda: setattr(s, 'fl', s.fl+1)); c_f[1].button("F-", key="flm", on_click=lambda: setattr(s, 'fl', max(0, s.fl-1)))
     with f_m:
         c_p = st.columns(4)
         with c_p[0]:
-            with st.popover("L🟨"):
-                p_y = st.selectbox("J", [x['n'] for x in s.js], key="y1")
-                if st.button("OK 🟨"): s.al+=1; s.eventos.append({'T':min_act,'E':f'🟨 LUD ({p_y})'}); st.rerun()
+            with st.popover("L🟨", use_container_width=True):
+                p_y = st.selectbox("J", [x['n'] for x in s.js], key="sel_y_lud")
+                if st.button("OK 🟨", key="btn_y_lud_ok"): s.al+=1; s.eventos.append({'T':min_act,'E':f'🟨 LUD ({p_y})'}); st.rerun()
         with c_p[1]:
-            with st.popover("R🟨"):
-                d_y = st.number_input("D", 1, 99, key="y2")
-                if st.button("OK 🟨"): s.ar+=1; s.eventos.append({'T':min_act,'E':f'🟨 RIV (#{d_y})'}); st.rerun()
+            with st.popover("R🟨", use_container_width=True):
+                d_y = st.number_input("D", 1, 99, key="num_y_riv")
+                if st.button("OK 🟨", key="btn_y_riv_ok"): s.ar+=1; s.eventos.append({'T':min_act,'E':f'🟨 RIV (#{d_y})'}); st.rerun()
         with c_p[2]:
-            st.button(f"✅🧤({s.pm_ok})", on_click=lambda: setattr(s, 'pm_ok', s.pm_ok+1), use_container_width=True)
-            st.button(f"❌🧤({s.pm_err})", on_click=lambda: setattr(s, 'pm_err', s.pm_err+1), use_container_width=True)
+            st.button(f"✅🧤({s.pm_ok})", key="gk_m_ok", on_click=lambda: setattr(s, 'pm_ok', s.pm_ok+1), use_container_width=True)
+            st.button(f"❌🧤({s.pm_err})", key="gk_m_err", on_click=lambda: setattr(s, 'pm_err', s.pm_err+1), use_container_width=True)
         with c_p[3]:
-            st.button(f"✅👟({s.pp_ok})", on_click=lambda: setattr(s, 'pp_ok', s.pp_ok+1), use_container_width=True)
-            st.button(f"❌👟({s.pp_err})", on_click=lambda: setattr(s, 'pp_err', s.pp_err+1), use_container_width=True)
+            st.button(f"✅👟({s.pp_ok})", key="gk_p_ok", on_click=lambda: setattr(s, 'pp_ok', s.pp_ok+1), use_container_width=True)
+            st.button(f"❌👟({s.pp_err})", key="gk_p_err", on_click=lambda: setattr(s, 'pp_err', s.pp_err+1), use_container_width=True)
     with f_r:
-        if st.button("⏱️ TM RIV", use_container_width=True): toggle_timer(); s.tm, s.tm_i = True, time.time(); s.eventos.append({'T':min_act,'E':'⏱️ TM RIVAL'}); st.rerun()
+        if st.button("⏱️ TM RIV", key="tm_riv_footer", use_container_width=True): toggle_timer(); s.tm, s.tm_i = True, time.time(); s.eventos.append({'T':min_act,'E':'⏱️ TM RIVAL'}); st.rerun()
         st.write(f"Faltas RIV: {s.fr}")
-        c_f2 = st.columns(2); c_f2[0].button("F+ ", on_click=lambda: setattr(s, 'fr', s.fr+1)); c_f2[1].button("F- ", on_click=lambda: setattr(s, 'fr', max(0, s.fr-1)))
+        c_f2 = st.columns(2); c_f2[0].button("F+ ", key="frp", on_click=lambda: setattr(s, 'fr', s.fr+1)); c_f2[1].button("F- ", key="frm", on_click=lambda: setattr(s, 'fr', max(0, s.fr-1)))
     st.markdown("</div>", unsafe_allow_html=True)
 
 with tab2:
@@ -159,26 +159,35 @@ with tab4:
     st.subheader("🧤 Rendimiento Portería")
     def p_calc(o, e): t=o+e; return f"{(o/t*100):.1f}%" if t>0 else "0%"
     col1, col2 = st.columns(2)
-    col1.metric("Saques Mano", p_calc(s.pm_ok, s.pm_err), f"Total: {s.pm_ok+s.pm_err}")
-    col2.metric("Saques Pie", p_calc(s.pp_ok, s.pp_err), f"Total: {s.pp_ok+s.pp_err}")
+    col1.metric("Saques Mano", p_calc(s.pm_ok, s.pm_err), f"OK: {s.pm_ok} | X: {s.pm_err}")
+    col2.metric("Saques Pie", p_calc(s.pp_ok, s.pp_err), f"OK: {s.pp_ok} | X: {s.pp_err}")
     
     st.markdown("---")
     st.subheader("📦 Exportar Informe Excel")
     
-    # Generación automática del archivo para el botón (No desaparece)
+    # Generación de Excel persistente
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
         pd.DataFrame({"Dato": ["LUD", "RIV", "F.LUD", "F.RIV"], "Val": [s.ml, s.mr, s.fl, s.fr]}).to_excel(writer, sheet_name='Resumen', index=False)
-        pd.DataFrame(s.eventos).to_excel(writer, sheet_name='Historial', index=False)
-        pd.DataFrame(s.analisis_goles).to_excel(writer, sheet_name='Goles_Tactica', index=False)
-        data_j = [{"Jugador": j["n"], "Minutos": f"{int(j['tot']//60):02d}:{int(j['tot']%60):02d}", "Rot": j["r"]} for j in s.js]
+        if s.eventos: pd.DataFrame(s.eventos).to_excel(writer, sheet_name='Historial', index=False)
+        if s.analisis_goles: pd.DataFrame(s.analisis_goles).to_excel(writer, sheet_name='Goles_Tactica', index=False)
+        
+        data_j = []
+        for j in s.js:
+            t_total_j = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
+            mj, sj = divmod(int(t_total_j), 60)
+            data_j.append({"Jugador": j["n"], "Minutos": f"{mj:02d}:{sj:02d}", "Rot": j["r"]})
         pd.DataFrame(data_j).to_excel(writer, sheet_name='Jugadores', index=False)
-        pd.DataFrame([{"Tipo":"Mano","%":p_calc(s.pm_ok, s.pm_err)},{"Tipo":"Pie","%":p_calc(s.pp_ok, s.pp_err)}]).to_excel(writer, sheet_name='Porteros', index=False)
+        
+        data_p = [{"Tipo": "Mano", "OK": s.pm_ok, "X": s.pm_err, "%": p_calc(s.pm_ok, s.pm_err)},
+                  {"Tipo": "Pie", "OK": s.pp_ok, "X": s.pp_err, "%": p_calc(s.pp_ok, s.pp_err)}]
+        pd.DataFrame(data_p).to_excel(writer, sheet_name='Porteros', index=False)
     
     st.download_button(
         label="📥 DESCARGAR EXCEL (.xlsx)",
         data=buffer.getvalue(),
         file_name=f"LUD_Partido_{s.rv}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
+        use_container_width=True,
+        key="global_download_excel"
     )
