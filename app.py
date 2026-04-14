@@ -3,9 +3,9 @@ import pandas as pd
 import time
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(page_title="LUD Match Control v23.0", layout="wide")
+st.set_page_config(page_title="LUD Match Control v23.1 FINAL READY", layout="wide")
 
-# --- CSS INTEGRAL ---
+# --- CSS INTEGRAL MEJORADO VISUALMENTE ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;700;900&display=swap');
@@ -36,8 +36,11 @@ st.markdown("""
 
     .footer-control { background-color: #ffffff; padding: 8px; border-radius: 15px 15px 0 0; border-top: 5px solid #4B2E2A; margin-top: 10px; }
     
-    /* Estilo específico para botones de error de portero */
-    div.stButton > button[key^="err_"] { background-color: #ffcccc !important; color: #990000 !important; border: 1px solid #990000 !important; font-weight: bold !important; }
+    /* ESTILOS BOTONES PORTERÍA MEJORADOS */
+    div.stButton > button[key$="_ok"] { background-color: #d4edda !important; color: #155724 !important; border: 2px solid #155724 !important; font-size: 1.2rem !important; border-radius: 10px !important; }
+    div.stButton > button[key$="_err"] { background-color: #f8d7da !important; color: #721c24 !important; border: 2px solid #721c24 !important; font-size: 1.2rem !important; border-radius: 10px !important; }
+    .gk-stat-icon { font-size: 2rem; text-align: center; margin-bottom: -5px; }
+    .gk-stat-total { font-size: 0.8rem; font-weight: bold; text-align: center; color: #4B2E2A; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -47,7 +50,7 @@ if 'js' not in st.session_state:
     st.session_state.update({
         "js": [{"n":x,"tt":0.0,"tot":0.0,"r":0,"i":None,"p":False} for x in n],
         "eventos": [], 
-        "pm_ok": 0, "pm_err": 0, "pp_ok": 0, "pp_err": 0, # Stats Portería Detalladas
+        "pm_ok": 0, "pm_err": 0, "pp_ok": 0, "pp_err": 0, 
         "al": 0, "rl": 0, "ar": 0, "rr": 0, 
         "ml": 0, "mr": 0, "fl": 0, "fr": 0, "ta": 0.0, "ic": None, "on": False, 
         "pa": "1T", "rv": "RIVAL", "tm": False, "tm_i": None,
@@ -55,7 +58,7 @@ if 'js' not in st.session_state:
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v23")
+st_autorefresh(1000, key="f5_lud_v23.1")
 
 # --- LÓGICA ---
 ah = time.time()
@@ -93,7 +96,7 @@ def toggle_timer():
 tab1, tab2 = st.tabs(["🎮 PARTIDO", "📊 DATA TÁCTICA"])
 
 with tab1:
-    st.markdown(f'<div class="app-title-container"><img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg/1200px-Levante_Uni%C3%B3n_Deportiva%2C_S.A.D._logo.svg.png" width="35"><div class="app-title-text">Match Control by Kike</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="app-title-container"><img src="https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Levante_Uni%C3%B3Deportiva%2C_S.A.D._logo.svg/1200px-Levante_Uni%C3%B3Deportiva%2C_S.A.D._logo.svg.png" width="35"><div class="app-title-text">Match Control by Kike</div></div>', unsafe_allow_html=True)
 
     tm_sec = max(0, 60 - int(ah - s.tm_i)) if s.tm and s.tm_i else 0
     timer_display = f"{tm_sec}s" if s.tm else f"{mv:02d}:{sv:02d}"
@@ -142,9 +145,9 @@ with tab1:
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- FOOTER CON BOTONES DE ERROR EN PORTERÍA ---
+    # --- FOOTER SIMÉTRICO CON PORTERÍA MEJORADA ---
     st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
-    f_l, f_m, f_r = st.columns([2.5, 3, 2.5])
+    f_l, f_m, f_r = st.columns([2.5, 3.2, 2.5])
     
     with f_l: # LUD
         c_tml, c_fl = st.columns([1.5, 1])
@@ -154,32 +157,41 @@ with tab1:
             st.button("F+", key="bt_flp", use_container_width=True, on_click=lambda: setattr(s, 'fl', s.fl+1))
             st.button("F-", key="bt_flm", use_container_width=True, on_click=lambda: setattr(s, 'fl', max(0, s.fl-1)))
             
-    with f_m: # Disciplina y Stats Portero
-        c_dis1, c_dis2 = st.columns(2)
-        with c_dis1: # LUD
-            with st.popover("🟨", use_container_width=True):
-                p_y = st.selectbox("Jugador", [j['n'] for j in s.js], key="sb_y_lud")
-                if st.button("OK 🟨"): s.al+=1; capturar_cuarteto("🟨 LUD", p_y); s.eventos.append({'min':min_act,'info':f'🟨{p_y}'}); st.rerun()
-            with st.popover("🟥", use_container_width=True):
-                p_r = st.selectbox("Jugador", [j['n'] for j in s.js], key="sb_r_lud")
-                if st.button("OK 🟥"): s.rl+=1; capturar_cuarteto("🟥 LUD", p_r); s.eventos.append({'min':min_act,'info':f'🟥{p_r}'}); st.rerun()
-        with c_dis2: # RIVAL
-            with st.popover("🟨", use_container_width=True):
-                d_y = st.number_input("Dorsal", 1, 99, key="ni_y_riv")
-                if st.button("RIV 🟨"): s.ar+=1; capturar_cuarteto("🟨 RIV", f"#{d_y}"); s.eventos.append({'min':min_act,'info':f'🟨#{d_y} RIV'}); st.rerun()
-            with st.popover("🟥", use_container_width=True):
-                d_r = st.number_input("Dorsal", 1, 99, key="ni_r_riv")
-                if st.button("RIV 🟥"): s.rr+=1; capturar_cuarteto("🟥 RIV", f"#{d_r}"); s.eventos.append({'min':min_act,'info':f'🟥#{d_r} RIV'}); st.rerun()
-        
-        # Stats portería con botones de acierto y error
-        st.markdown("<div style='text-align:center; font-size:0.7rem; font-weight:bold; margin-top:5px;'>CONTROL SAQUES</div>", unsafe_allow_html=True)
-        c_p1, c_p2 = st.columns(2)
-        with c_p1:
-            st.button(f"🧤 {s.pm_ok}", key="bt_pm_ok", use_container_width=True, on_click=lambda: setattr(s, 'pm_ok', s.pm_ok+1))
-            st.button("X", key="err_pm", use_container_width=True, on_click=lambda: setattr(s, 'pm_err', s.pm_err+1))
-        with c_p2:
-            st.button(f"👟 {s.pp_ok}", key="bt_pp_ok", use_container_width=True, on_click=lambda: setattr(s, 'pp_ok', s.pp_ok+1))
-            st.button("X", key="err_pp", use_container_width=True, on_click=lambda: setattr(s, 'pp_err', s.pp_err+1))
+    with f_m: # Disciplina y Stats Portero VISUALES
+        c_dis, c_gk = st.columns([1, 1.5])
+        with c_dis: # Disciplina compacta
+            st.markdown("<div style='text-align:center; font-size:0.7rem; font-weight:bold;'>TARJETAS</div>", unsafe_allow_html=True)
+            col_d_l, col_d_r = st.columns(2)
+            with col_d_l:
+                with st.popover("LUD", use_container_width=True):
+                    p_y = st.selectbox("🟨 J", [j['n'] for j in s.js], key="sb_y_lud")
+                    if st.button("OK L🟨"): s.al+=1; capturar_cuarteto("🟨 LUD", p_y); s.eventos.append({'min':min_act,'info':f'🟨{p_y}'}); st.rerun()
+                    p_r = st.selectbox("🟥 J", [j['n'] for j in s.js], key="sb_r_lud")
+                    if st.button("OK L🟥"): s.rl+=1; capturar_cuarteto("🟥 LUD", p_r); s.eventos.append({'min':min_act,'info':f'🟥{p_r}'}); st.rerun()
+            with col_d_r:
+                with st.popover("RIV", use_container_width=True):
+                    d_y = st.number_input("🟨 D", 1, 99, key="ni_y_riv")
+                    if st.button("OK R🟨"): s.ar+=1; capturar_cuarteto("🟨 RIV", f"#{d_y}"); s.eventos.append({'min':min_act,'info':f'🟨#{d_y} RIV'}); st.rerun()
+                    d_r = st.number_input("🟥 D", 1, 99, key="ni_r_riv")
+                    if st.button("OK R🟥"): s.rr+=1; capturar_cuarteto("🟥 RIV", f"#{d_r}"); s.eventos.append({'min':min_act,'info':f'🟥#{d_r} RIV'}); st.rerun()
+
+        with c_gk: # Portería Visual con Iconos y Check/X
+            st.markdown("<div style='text-align:center; font-size:0.7rem; font-weight:bold;'>CONTROL SAQUES (OK vs X)</div>", unsafe_allow_html=True)
+            col_m, col_p = st.columns(2)
+            
+            with col_m: # Mano
+                st.markdown('<div class="gk-stat-icon">🧤</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="gk-stat-total">({s.pm_ok + s.pm_err})</div>', unsafe_allow_html=True)
+                c_m_b = st.columns(2)
+                c_m_b[0].button("✅", key="gk_m_ok", use_container_width=True, on_click=lambda: setattr(s, 'pm_ok', s.pm_ok+1))
+                c_m_b[1].button("❌", key="gk_m_err", use_container_width=True, on_click=lambda: setattr(s, 'pm_err', s.pm_err+1))
+                
+            with col_p: # Pie
+                st.markdown('<div class="gk-stat-icon">👟</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="gk-stat-total">({s.pp_ok + s.pp_err})</div>', unsafe_allow_html=True)
+                c_p_b = st.columns(2)
+                c_p_b[0].button("✅", key="gk_p_ok", use_container_width=True, on_click=lambda: setattr(s, 'pp_ok', s.pp_ok+1))
+                c_p_b[1].button("❌", key="gk_p_err", use_container_width=True, on_click=lambda: setattr(s, 'pp_err', s.pp_err+1))
 
     with f_r: # RIVAL
         c_fr, c_tmr = st.columns([1, 1.5])
@@ -191,7 +203,6 @@ with tab1:
     st.markdown("</div>", unsafe_allow_html=True)
 
 with tab2:
-    # --- PANEL DE EFICIENCIA DE PORTERO ---
     st.subheader("🧤 Análisis de Portería")
     
     def calc_perc(ok, err):
@@ -200,9 +211,9 @@ with tab2:
 
     col_stats_p1, col_stats_p2 = st.columns(2)
     with col_stats_p1:
-        st.metric("Efectividad Saque MANO", calc_perc(s.pm_ok, s.pm_err), f"Total: {s.pm_ok + s.pm_err}")
+        st.metric("🧤 Efectividad Saque MANO", calc_perc(s.pm_ok, s.pm_err), f"OK: {s.pm_ok} | X: {s.pm_err}")
     with col_stats_p2:
-        st.metric("Efectividad Saque PIE", calc_perc(s.pp_ok, s.pp_err), f"Total: {s.pp_ok + s.pp_err}")
+        st.metric("👟 Efectividad Saque PIE", calc_perc(s.pp_ok, s.pp_err), f"OK: {s.pp_ok} | X: {s.pp_err}")
 
     st.markdown("---")
     st.subheader("📋 Registro Táctico de Cuartetos")
