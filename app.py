@@ -6,7 +6,7 @@ from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
 # Configuración de página
-st.set_page_config(page_title="LUD Match Control v29.1", layout="wide")
+st.set_page_config(page_title="LUD Match Control v30.0", layout="wide")
 
 # --- CSS INTEGRAL ---
 st.markdown("""
@@ -37,7 +37,7 @@ st.markdown("""
     .pista-roja { background-color: #FF0000 !important; color: white; border: 2px solid #FFFF00; animation: blinker 0.8s linear infinite; }
     .banquillo { background-color: #D1D1D1 !important; color: #4B2E2A !important; }
     @keyframes blinker { 50% { opacity: 0.4; } }
-    .footer-control { background-color: #ffffff; padding: 5px; border-radius: 10px; border-top: 4px solid #4B2E2A; margin-top: 5px; }
+    .footer-control { background-color: #ffffff; padding: 5px; border-radius: 10px; border-top: 4px solid #4B2E2A; margin-top: 10px; }
     .stButton > button { height: 30px !important; padding: 0px 5px !important; font-size: 0.75rem !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -50,17 +50,21 @@ if 'js' not in st.session_state:
         "eventos": [], "pm_ok": 0, "pm_err": 0, "pp_ok": 0, "pp_err": 0, 
         "al": 0, "rl": 0, "ar": 0, "rr": 0, "ml": 0, "mr": 0, "fl": 0, "fr": 0, 
         "ta": 0.0, "ic": None, "on": False, "rv": "RIVAL", "lugar": "Pabellón", "fecha": datetime.now().date(),
+        "dorsales_riv": "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12",
         "tm": False, "tm_i": None, "analisis_goles": [], "periodo": "1ª PARTE", "finalizado": False
     })
 
 s = st.session_state
-st_autorefresh(1000, key="f5_lud_v29_1")
+st_autorefresh(1000, key="f5_lud_v30")
 
 ah = time.time()
 tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr_total)
 mv, sv = divmod(int(rem), 60)
 min_act = f"{s.periodo} {mv:02d}:{sv:02d}"
+
+# Procesar dorsales rivales para dropdowns
+lista_riv = [d.strip() for d in s.dorsales_riv.split(",")]
 
 # --- FUNCIONES ---
 def toggle_timer():
@@ -114,22 +118,23 @@ with t1:
     c_top = st.columns([2, 1, 1, 1, 1])
     if c_top[0].button("▶ START / STOP ⏸", key="main_btn", use_container_width=True, disabled=s.finalizado): toggle_timer(); st.rerun()
     if c_top[1].button("🏁 FIN", key="end_btn", use_container_width=True, disabled=s.finalizado): finalizar_fase()
+    
     with c_top[2]:
         with st.popover("⚽ LUD", use_container_width=True):
-            p = st.selectbox("Autor", [x['n'] for x in s.js], key="sel_l")
-            if st.button("GOOOL LUD"): s.ml+=1; capturar_tactico("GOL LUD", p); s.eventos.append({'Tiempo':min_act,'Evento':f'⚽ GOL LUD ({p})'}); st.rerun()
+            p = st.selectbox("Goleador", [x['n'] for x in s.js], key="sel_l")
+            if st.button("CONFIRMAR GOL"): s.ml+=1; capturar_tactico("GOL LUD", p); s.eventos.append({'Tiempo':min_act,'Evento':f'⚽ GOL LUD ({p})'}); st.rerun()
+    
     with c_top[3]:
         with st.popover(f"⚽ {s.rv[:5]}", use_container_width=True):
-            d = st.number_input("Dorsal", 1, 99, key="sel_r")
-            if st.button(f"GOL {s.rv[:5]}"): s.mr+=1; capturar_tactico(f"GOL {s.rv}", f"#{d}"); s.eventos.append({'Tiempo':min_act,'Evento':f'⚽ GOL {s.rv} (#{d})'}); st.rerun()
+            d_r = st.selectbox("Dorsal", lista_riv, key="sel_r_gol")
+            if st.button(f"GOL {s.rv[:5]}"): s.mr+=1; capturar_tactico(f"GOL {s.rv}", f"#{d_r}"); s.eventos.append({'Tiempo':min_act,'Evento':f'⚽ GOL {s.rv} (#{d_r})'}); st.rerun()
+    
     with c_top[4]: 
         if st.button("🗑️ RESET"): st.session_state.clear(); st.rerun()
 
     st.markdown("---")
     
-    # Contador de jugadores de campo actualmente en pista
     jugadores_campo_pista = sum(1 for j in s.js if j['p'] and j['n'] not in ["Serra", "Jose"])
-    
     cols = st.columns(5)
     for i, j in enumerate(s.js):
         with cols[i%5]:
@@ -143,9 +148,7 @@ with t1:
             else:
                 st.markdown("<div style='height:40px;'></div>", unsafe_allow_html=True)
             
-            # REGLA DE 4+1: Solo permitimos entrar si es portero o si hay menos de 4 jugadores de campo
             puedo_entrar = es_p or jugadores_campo_pista < 4
-            
             if st.button("🔄", key=f"bt_{i}", use_container_width=True, disabled=s.finalizado):
                 if not j["p"]:
                     if puedo_entrar:
@@ -169,13 +172,13 @@ with t1:
         with c1: 
             with st.popover("LUD 🟨🟥"):
                 py = st.selectbox("Jugador", [x['n'] for x in s.js], key="sy_l")
-                if st.button("🟨 LUD"): s.al+=1; s.eventos.append({'Tiempo':min_act,'Evento':f'🟨 LUD ({py})'}); st.rerun()
-                if st.button("🟥 LUD"): s.rl+=1; s.eventos.append({'Tiempo':min_act,'Evento':f'🟥 LUD ({py})'}); st.rerun()
+                if st.button("🟨 LUD", key="y_l_b"): s.al+=1; s.eventos.append({'Tiempo':min_act,'Evento':f'🟨 LUD ({py})'}); st.rerun()
+                if st.button("🟥 LUD", key="r_l_b"): s.rl+=1; s.eventos.append({'Tiempo':min_act,'Evento':f'🟥 LUD ({py})'}); st.rerun()
         with c2:
             with st.popover(f"{s.rv[:3]} 🟨🟥"):
-                dy = st.number_input("Dorsal", 1, 99, key="sy_r")
-                if st.button(f"🟨 {s.rv[:3]}"): s.ar+=1; s.eventos.append({'Tiempo':min_act,'Evento':f'🟨 {s.rv} (#{dy})'}); st.rerun()
-                if st.button(f"🟥 {s.rv[:3]}"): s.rr+=1; s.eventos.append({'Tiempo':min_act,'Evento':f'🟥 {s.rv} (#{dy})'}); st.rerun()
+                dy_r = st.selectbox("Dorsal", lista_riv, key="sy_r_sel")
+                if st.button(f"🟨 {s.rv[:3]}", key="y_r_b"): s.ar+=1; s.eventos.append({'Tiempo':min_act,'Evento':f'🟨 {s.rv} (#{dy_r})'}); st.rerun()
+                if st.button(f"🟥 {s.rv[:3]}", key="r_r_b"): s.rr+=1; s.eventos.append({'Tiempo':min_act,'Evento':f'🟥 {s.rv} (#{dy_r})'}); st.rerun()
         with c3:
             st.write("🧤 Mano")
             c_m = st.columns(2)
@@ -196,26 +199,22 @@ with t1:
 with t2:
     if s.eventos: st.table(pd.DataFrame(s.eventos))
     else: st.info("Sin eventos")
-
 with t3:
     if s.analisis_goles: st.table(pd.DataFrame(s.analisis_goles))
     else: st.info("Sin goles")
-
 with t4:
     def p_calc(o, e): t=o+e; return f"{(o/t*100):.1f}%" if t>0 else "0.0%"
     st.subheader("Estadísticas Portería")
     st.write(f"🧤 Mano: {p_calc(s.pm_ok, s.pm_err)} (Total: {s.pm_ok+s.pm_err})")
     st.write(f"👟 Pie: {p_calc(s.pp_ok, s.pp_err)} (Total: {s.pp_ok+s.pp_err})")
-    st.markdown("---")
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine='openpyxl') as writer:
         pd.DataFrame({"Métrica": ["Rival", "Fecha", "Lugar", "Goles LUD", f"Goles {s.rv}", "Faltas LUD", f"Faltas {s.rv}"], 
                       "Valor": [s.rv, s.fecha.strftime("%d/%m/%Y"), s.lugar, s.ml, s.mr, s.fl, s.fr]}).to_excel(writer, sheet_name='Resumen', index=False)
         if s.eventos: pd.DataFrame(s.eventos).to_excel(writer, sheet_name='Historial', index=False)
-        if s.analisis_goles: pd.DataFrame(s.analisis_goles).to_excel(writer, sheet_name='Análisis Goles', index=False)
-        data_j = [{"Jugador": x["n"], "Min Tot": f"{int(x['tot']//60):02d}:{int(x['tot']%60):02d}", "Rotaciones": x["r"]} for x in s.js if x["n"] not in ["Serra", "Jose"]]
+        if s.analisis_goles: pd.DataFrame(s.analisis_goles).to_excel(writer, sheet_name='Goles', index=False)
+        data_j = [{"Jugador": x["n"], "Min Tot": f"{int(x['tot']//60):02d}:{int(x['tot']%60):02d}", "R": x["r"]} for x in s.js if x["n"] not in ["Serra", "Jose"]]
         pd.DataFrame(data_j).to_excel(writer, sheet_name='Jugadores', index=False)
-    
     file_name = f"LUD-vs-{s.rv.replace(' ', '_')}({s.fecha.strftime('%d-%m-%Y')}).xlsx"
     st.download_button(label=f"📥 DESCARGAR {file_name}", data=buf.getvalue(), file_name=file_name, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
@@ -224,4 +223,7 @@ with t5:
     s.rv = st.text_input("Nombre del Rival", s.rv).upper()
     s.lugar = st.text_input("Lugar del Partido", s.lugar)
     s.fecha = st.date_input("Fecha del Partido", s.fecha)
-    st.info("Estos datos se utilizarán para el marcador y el informe final.")
+    st.divider()
+    st.subheader("Jugadores Rivales")
+    st.info("Escribe los dorsales separados por comas para que aparezcan en los menús táctiles (sin usar el teclado en el partido).")
+    s.dorsales_riv = st.text_area("Dorsales del Rival", s.dorsales_riv)
