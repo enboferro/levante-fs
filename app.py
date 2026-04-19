@@ -2,13 +2,12 @@ import streamlit as st
 import pandas as pd
 import time
 import io
-from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
 # --- CONFIGURACIÓN ---
-st.set_page_config(page_title="LUD Match Control v35.1", layout="wide")
+st.set_page_config(page_title="LUD Match Control v35.2", layout="wide")
 
-# --- CSS CON CONTRASTE DINÁMICO ---
+# --- CSS CON CONTRASTE DINÁMICO Y CABECERA AMPLIADA ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;900&display=swap');
@@ -19,6 +18,7 @@ st.markdown("""
         background: #4B2E2A; padding: 5px; border-radius: 8px 8px 0 0;
         color: white; text-align: center; margin-bottom: 0px;
     }
+    .match-info-sub { font-size: 0.8rem; font-weight: 400; opacity: 0.9; margin-bottom: 2px; }
     .score-number { font-size: 2.5rem !important; font-weight: 900; font-family: 'Roboto Mono'; line-height: 1; }
     .stadium-clock { font-family: 'Roboto Mono'; font-size: 3rem !important; font-weight: 700; line-height: 1; }
     
@@ -33,21 +33,14 @@ st.markdown("""
     }
     .player-name { font-size: 0.85rem !important; font-weight: 900 !important; text-transform: uppercase; }
     
-    /* ESTILOS DINÁMICOS POR ESTADO */
-    /* 1. Fuera de pista (Banquillo) -> Letras Negras */
     .banquillo { background-color: #D1D1D1 !important; color: #000000 !important; }
     .banquillo .time-large { color: #000000 !important; }
-    .banquillo .time-total { color: #333333 !important; }
-
-    /* 2. En pista -> Letras Blancas */
     .en-pista { color: #FFFFFF !important; }
     .en-pista .time-large { color: #FFFFFF !important; text-shadow: 1px 1px 2px #000; }
-    .en-pista .time-total { color: #EEEEEE !important; }
 
     .time-large { font-size: 1.8rem !important; font-weight: 900 !important; font-family: 'Roboto Mono'; line-height: 1; }
     .time-total { font-size: 0.7rem !important; font-weight: 700; }
 
-    /* Colores de fondo para Pista */
     .pista-portero { background-color: #008080 !important; }
     .pista-verde { background-color: #28a745 !important; }
     .pista-naranja { background-color: #fd7e14 !important; }
@@ -64,12 +57,14 @@ if 'js' not in st.session_state:
     st.session_state.update({
         "js": [{"n":x,"tt":0.0,"tot":0.0,"r":0,"g":0,"i":None,"p":False} for x in n],
         "eventos": [], "ml": 0, "mr": 0, "fl": 0, "fr": 0, 
-        "ta": 0.0, "ic": None, "on": False, "rv": "RIVAL", "periodo": "1ª PARTE", "finalizado": False,
+        "ta": 0.0, "ic": None, "on": False, 
+        "rv": "RIVAL", "ciudad": "VALENCIA", "fecha": datetime.now().strftime("%d/%m/%Y"),
+        "periodo": "1ª PARTE", "finalizado": False,
         "porteros": [n[0], n[1]]
     })
 
 s = st.session_state
-st_autorefresh(1000, key="refresh_lud_v35_1")
+st_autorefresh(1000, key="refresh_lud_v35_2")
 ah = time.time()
 tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr_total); mv, sv = divmod(int(rem), 60)
@@ -93,12 +88,13 @@ def toggle_timer():
             if j["p"] and j["i"] and j["n"] not in s.porteros:
                 d = now - j["i"]; j["tot"] += d; j["tt"] += d; j["i"] = None
 
-# --- UI ---
+# --- UI TABS ---
 t1, t2, t3, t4, t5 = st.tabs(["🎮 PARTIDO", "⚠️ INCIDENCIAS", "📊 TOTALES", "📜 HISTORIAL", "⚙️ CONFIG"])
 
 with t1:
     st.markdown(f"""
         <div class="scoreboard-container">
+            <div class="match-info-sub">{s.fecha} - {s.ciudad}</div>
             <span class="score-number">{s.ml}</span>
             <span class="stadium-clock">&nbsp;&nbsp;{mv:02d}:{sv:02d}&nbsp;&nbsp;</span>
             <span class="score-number">{s.mr}</span>
@@ -118,32 +114,27 @@ with t1:
         st.rerun()
 
     cols = st.columns(3)
-    pista_count = sum(1 for j in s.js if j['p'] and j['n'] not in s.porteros)
+    p_count = sum(1 for j in s.js if j['p'] and j['n'] not in s.porteros)
     for i, j in enumerate(s.js):
         with cols[i % 3]:
             es_p = j['n'] in s.porteros
             cur = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             tot = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-            
-            # Lógica de clases CSS
-            if not j['p']:
-                cl_base = "banquillo"
-            else:
-                cl_base = "en-pista " + ("pista-portero" if es_p else ("pista-verde" if cur < 240 else ("pista-naranja" if cur < 360 else "pista-roja")))
+            cl = "banquillo" if not j['p'] else ("en-pista " + ("pista-portero" if es_p else ("pista-verde" if cur < 240 else ("pista-naranja" if cur < 360 else "pista-roja"))))
             
             st.markdown(f"""
-                <div class='card {cl_base}'>
+                <div class='card {cl}'>
                     <div class='player-name'>{j['n']}</div>
                     <div class='time-large'>{int(cur//60):02d}:{int(cur%60):02d}</div>
                     <div class='time-total'>Σ {int(tot//60):02d}:{int(tot%60):02d} | ⚽ {j['g']}</div>
                 </div>
             """, unsafe_allow_html=True)
             
-            puedo_entrar = es_p or pista_count < 4
+            p_entrar = es_p or p_count < 4
             c1, c2 = st.columns([3, 1])
             if c1.button("🔄", key=f"c_{i}", use_container_width=True):
                 if not j["p"]:
-                    if puedo_entrar:
+                    if p_entrar:
                         j["p"] = True
                         if not es_p: j["i"], j["r"], j["tt"] = (ah if s.on else None), j["r"]+1, 0.0
                 else:
@@ -156,20 +147,20 @@ with t1:
                 st.rerun()
 
 with t2:
-    st.subheader("⚠️ Registro de Incidencias")
+    st.subheader("⚠️ Incidencias")
     cl1, cl2 = st.columns(2)
     with cl1:
         st.markdown("### LUD")
-        if st.button("FALTA + LUD", use_container_width=True): s.fl += 1; s.eventos.append({'Tiempo': min_act, 'Evento': 'FALTA LUD', 'Cuarteto': get_cuarteto()}); st.rerun()
+        if st.button("FALTA + LUD"): s.fl += 1; s.eventos.append({'Tiempo': min_act, 'Evento': 'FALTA LUD', 'Cuarteto': get_cuarteto()}); st.rerun()
         p_sel = st.selectbox("Elegir Jugador LUD", [x['n'] for x in s.js], key="psel")
-        if st.button("🟨 Amarilla LUD", use_container_width=True): s.eventos.append({'Tiempo': min_act, 'Evento': f'🟨 Amarilla: {p_sel}', 'Cuarteto': get_cuarteto()})
-        if st.button("🟥 Roja LUD", use_container_width=True): s.eventos.append({'Tiempo': min_act, 'Evento': f'🟥 Roja: {p_sel}', 'Cuarteto': get_cuarteto()})
+        if st.button("🟨 Amarilla LUD"): s.eventos.append({'Tiempo': min_act, 'Evento': f'🟨 Amarilla: {p_sel}', 'Cuarteto': get_cuarteto()})
+        if st.button("🟥 Roja LUD"): s.eventos.append({'Tiempo': min_act, 'Evento': f'🟥 Roja: {p_sel}', 'Cuarteto': get_cuarteto()})
     with cl2:
         st.markdown(f"### {s.rv}")
-        if st.button(f"FALTA + {s.rv}", use_container_width=True): s.fr += 1; s.eventos.append({'Tiempo': min_act, 'Evento': f'FALTA {s.rv}', 'Cuarteto': get_cuarteto()}); st.rerun()
+        if st.button(f"FALTA + {s.rv}"): s.fr += 1; s.eventos.append({'Tiempo': min_act, 'Evento': f'FALTA {s.rv}', 'Cuarteto': get_cuarteto()}); st.rerun()
         d_tar = st.number_input("Dorsal Rival", 1, 99, key="dtar")
-        if st.button(f"🟨 Amarilla {s.rv}", use_container_width=True): s.eventos.append({'Tiempo': min_act, 'Evento': f'🟨 Amarilla {s.rv} (#{d_tar})', 'Cuarteto': get_cuarteto()})
-        if st.button(f"🟥 Roja {s.rv}", use_container_width=True): s.eventos.append({'Tiempo': min_act, 'Evento': f'🟥 Roja {s.rv} (#{d_tar})', 'Cuarteto': get_cuarteto()})
+        if st.button(f"🟨 Amarilla {s.rv}"): s.eventos.append({'Tiempo': min_act, 'Evento': f'🟨 Amarilla {s.rv} (#{d_tar})', 'Cuarteto': get_cuarteto()})
+        if st.button(f"🟥 Roja {s.rv}"): s.eventos.append({'Tiempo': min_act, 'Evento': f'🟥 Roja {s.rv} (#{d_tar})', 'Cuarteto': get_cuarteto()})
 
 with t3:
     st.subheader("📊 Totales")
@@ -182,5 +173,24 @@ with t4:
     else: st.info("Sin eventos.")
 
 with t5:
-    s.rv = st.text_input("Nombre Rival", s.rv).upper()
-    if st.button("🗑️ RESET TOTAL PARTIDO"): st.session_state.clear(); st.rerun()
+    st.subheader("⚙️ Configuración del Partido")
+    c1, c2, c3 = st.columns(3)
+    s.rv = c1.text_input("Rival", s.rv).upper()
+    s.ciudad = c2.text_input("Ciudad", s.ciudad).upper()
+    s.fecha = c3.text_input("Fecha", s.fecha)
+    
+    st.divider()
+    st.write("### Plantilla (14 Jugadores)")
+    new_names = []
+    cols_cfg = st.columns(2)
+    for i in range(14):
+        with (cols_cfg[0] if i < 7 else cols_cfg[1]):
+            n_val = st.text_input(f"Jugador {i+1}", value=s.js[i]['n'], key=f"cfg_{i}")
+            new_names.append(n_val)
+    
+    if st.button("💾 GUARDAR CAMBIOS PLANTILLA"):
+        s.js = [{"n":x,"tt":0.0,"tot":0.0,"r":0,"g":0,"i":None,"p":False} for x in new_names]
+        s.porteros = [new_names[0], new_names[1]]
+        st.rerun()
+
+    if st.button("🗑️ RESET TOTAL"): st.session_state.clear(); st.rerun()
