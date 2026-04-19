@@ -6,7 +6,7 @@ from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
 # --- CONFIGURACIÓN ---
-st.set_page_config(page_title="LUD Match Control v36.0", layout="wide")
+st.set_page_config(page_title="LUD Match Control v36.1", layout="wide")
 
 # --- INICIALIZACIÓN ---
 if 'js' not in st.session_state:
@@ -17,12 +17,13 @@ if 'js' not in st.session_state:
         "ta": 0.0, "ic": None, "on": False, 
         "rv": "RIVAL", "ciudad": "VALENCIA", "fecha": datetime.now().strftime("%d/%m/%Y"),
         "periodo": "1ª PARTE", "finalizado": False,
-        "porteros": [n_iniciales[0], n_iniciales[1]]
+        "porteros": [n_iniciales[0], n_iniciales[1]],
+        "datos_1t": None # Para guardar el resumen de la primera parte
     })
 
 s = st.session_state
 
-# --- CSS CONTRASTE DINÁMICO ---
+# --- CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;900&display=swap');
@@ -50,7 +51,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st_autorefresh(1000, key="refresh_v36")
+st_autorefresh(1000, key="refresh_v36_1")
 ah = time.time()
 tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr_total); mv, sv = divmod(int(rem), 60)
@@ -86,14 +87,14 @@ with tabs[0]:
     if c_top[2].button(f"⚽ {s.rv[:3]}", use_container_width=True):
         s.mr += 1; s.eventos.append({'Tiempo': min_act, 'Evento': f'GOL {s.rv} (#{d_riv})', 'Cuarteto': get_cuarteto()}); st.rerun()
     
-    # BOTONES DE FIN DE TIEMPO
     if s.periodo == "1ª PARTE":
-        if c_top[3].button("🏁 FIN 1T", use_container_width=True, help="Terminar Primera Parte"):
+        if c_top[3].button("🏁 FIN 1T", use_container_width=True):
             if s.on: toggle_timer()
+            s.datos_1t = {"faltas_lud": s.fl, "faltas_riv": s.fr, "goles_lud": s.ml, "goles_riv": s.mr}
             s.eventos.append({'Tiempo': min_act, 'Evento': '🏁 FIN 1ª PARTE', 'Cuarteto': '-'})
             s.periodo = "2ª PARTE"; s.ta = 0.0; s.fl, s.fr = 0, 0; st.rerun()
     else:
-        if c_top[3].button("🏁 FIN 2T", use_container_width=True, help="Terminar Partido"):
+        if c_top[3].button("🏁 FIN 2T", use_container_width=True):
             if s.on: toggle_timer()
             s.eventos.append({'Tiempo': min_act, 'Evento': '🏁 FIN PARTIDO', 'Cuarteto': '-'})
             s.finalizado = True; st.rerun()
@@ -136,7 +137,12 @@ with tabs[1]:
         if st.button(f"🟥 Roja {s.rv}"): s.eventos.append({'Tiempo': min_act, 'Evento': f'🟥 Roja {s.rv} (#{d_tar})', 'Cuarteto': get_cuarteto()})
 
 with tabs[2]:
-    st.subheader("📊 Totales")
+    st.subheader("📊 Totales y Resumen de Tiempos")
+    if s.datos_1t:
+        d1 = s.datos_1t
+        st.info(f"**Resumen 1ª PARTE:** Goles: {d1['goles_lud']}-{d1['goles_riv']} | Faltas: {d1['faltas_lud']}-{d1['faltas_riv']}")
+    
+    st.write("### Estadísticas Individuales")
     res_df = pd.DataFrame([{"Jugador": j['n'], "Goles": j['g'], "Tiempo Total": f"{int(j['tot']//60):02d}:{int(j['tot']%60):02d}", "Rotaciones": j['r']} for j in s.js])
     st.table(res_df)
 
@@ -145,14 +151,21 @@ with tabs[3]:
     if s.eventos: st.table(pd.DataFrame(s.eventos[::-1]))
 
 with tabs[4]:
-    st.subheader("📥 Exportar Datos Completos")
-    if st.button("Generar Excel de Partido"):
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            pd.DataFrame([{"Rival": s.rv, "Ciudad": s.ciudad, "Fecha": s.fecha, "Goles LUD": s.ml, "Goles Rival": s.mr}]).to_excel(writer, sheet_name='Info_General', index=False)
-            pd.DataFrame([{"Jugador": j['n'], "Goles": j['g'], "Segundos_Totales": j['tot'], "Rotaciones": j['r']} for j in s.js]).to_excel(writer, sheet_name='Jugadores', index=False)
-            pd.DataFrame(s.eventos).to_excel(writer, sheet_name='Historial_Eventos', index=False)
-        st.download_button(label="📥 Descargar Excel", data=output.getvalue(), file_name=f"LUD_Partido_{s.fecha}.xlsx", mime="application/vnd.ms-excel")
+    st.subheader("📥 Exportar Datos")
+    # Lógica corregida para generar el Excel
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        pd.DataFrame([{"Rival": s.rv, "Ciudad": s.ciudad, "Fecha": s.fecha, "Goles LUD": s.ml, "Goles Rival": s.mr}]).to_excel(writer, sheet_name='General', index=False)
+        pd.DataFrame([{"Jugador": j['n'], "Goles": j['g'], "Min_Totales": round(j['tot']/60, 2), "Rotaciones": j['r']} for j in s.js]).to_excel(writer, sheet_name='Jugadores', index=False)
+        if s.eventos: pd.DataFrame(s.eventos).to_excel(writer, sheet_name='Historial', index=False)
+    
+    processed_data = output.getvalue()
+    st.download_button(
+        label="📥 DESCARGAR EXCEL COMPLETO",
+        data=processed_data,
+        file_name=f"Acta_{s.rv}_{s.fecha}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 with tabs[5]:
     st.subheader("⚙️ Configuración")
