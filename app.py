@@ -6,9 +6,9 @@ from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
 # --- CONFIGURACIÓN ---
-st.set_page_config(page_title="LUD Match Control v35.0", layout="wide")
+st.set_page_config(page_title="LUD Match Control v35.1", layout="wide")
 
-# --- CSS MEJORADO (LETRAS BLANCAS Y DISEÑO COMPACTO) ---
+# --- CSS CON CONTRASTE DINÁMICO ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;900&display=swap');
@@ -31,20 +31,29 @@ st.markdown("""
         border-radius: 6px; padding: 4px; text-align: center; border: 1px solid #333; margin-bottom: 4px; 
         height: 105px; display: flex; flex-direction: column; justify-content: center;
     }
-    .player-name { font-size: 0.85rem !important; font-weight: 900 !important; color: #4B2E2A; text-transform: uppercase; }
+    .player-name { font-size: 0.85rem !important; font-weight: 900 !important; text-transform: uppercase; }
     
-    /* CAMBIO A BLANCO PARA EVITAR FATIGA VISUAL */
-    .time-large { font-size: 1.8rem !important; font-weight: 900 !important; font-family: 'Roboto Mono'; line-height: 1; color: #FFFFFF; text-shadow: 1px 1px 2px #000; }
-    
-    .time-total { font-size: 0.7rem !important; font-weight: 700; color: #EEE; }
+    /* ESTILOS DINÁMICOS POR ESTADO */
+    /* 1. Fuera de pista (Banquillo) -> Letras Negras */
+    .banquillo { background-color: #D1D1D1 !important; color: #000000 !important; }
+    .banquillo .time-large { color: #000000 !important; }
+    .banquillo .time-total { color: #333333 !important; }
 
-    .pista-portero { background-color: #008080 !important; color: white; }
-    .pista-verde { background-color: #28a745 !important; color: white; }
-    .pista-naranja { background-color: #fd7e14 !important; color: white; }
-    .pista-roja { background-color: #dc3545 !important; color: white; animation: blinker 0.8s linear infinite; }
-    .banquillo { background-color: #D1D1D1 !important; color: #4B2E2A !important; }
+    /* 2. En pista -> Letras Blancas */
+    .en-pista { color: #FFFFFF !important; }
+    .en-pista .time-large { color: #FFFFFF !important; text-shadow: 1px 1px 2px #000; }
+    .en-pista .time-total { color: #EEEEEE !important; }
+
+    .time-large { font-size: 1.8rem !important; font-weight: 900 !important; font-family: 'Roboto Mono'; line-height: 1; }
+    .time-total { font-size: 0.7rem !important; font-weight: 700; }
+
+    /* Colores de fondo para Pista */
+    .pista-portero { background-color: #008080 !important; }
+    .pista-verde { background-color: #28a745 !important; }
+    .pista-naranja { background-color: #fd7e14 !important; }
+    .pista-roja { background-color: #dc3545 !important; animation: blinker 0.8s linear infinite; }
     
-    @keyframes blinker { 50% { opacity: 0.6; } }
+    @keyframes blinker { 50% { opacity: 0.7; } }
     .stButton > button { height: 26px !important; font-size: 0.75rem !important; padding: 0px !important; border-radius: 4px; }
     </style>
     """, unsafe_allow_html=True)
@@ -60,13 +69,12 @@ if 'js' not in st.session_state:
     })
 
 s = st.session_state
-st_autorefresh(1000, key="refresh_lud_v35")
+st_autorefresh(1000, key="refresh_lud_v35_1")
 ah = time.time()
 tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr_total); mv, sv = divmod(int(rem), 60)
 min_act = f"{s.periodo} {mv:02d}:{sv:02d}"
 
-# --- LÓGICA DE EVENTOS ---
 def get_cuarteto():
     pista = [j['n'] for j in s.js if j['p'] and j['n'] not in s.porteros]
     while len(pista) < 4: pista.append("-")
@@ -85,7 +93,7 @@ def toggle_timer():
             if j["p"] and j["i"] and j["n"] not in s.porteros:
                 d = now - j["i"]; j["tot"] += d; j["tt"] += d; j["i"] = None
 
-# --- UI TABS ---
+# --- UI ---
 t1, t2, t3, t4, t5 = st.tabs(["🎮 PARTIDO", "⚠️ INCIDENCIAS", "📊 TOTALES", "📜 HISTORIAL", "⚙️ CONFIG"])
 
 with t1:
@@ -116,10 +124,15 @@ with t1:
             es_p = j['n'] in s.porteros
             cur = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             tot = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-            cl = "banquillo" if not j['p'] else ("pista-portero" if es_p else ("pista-verde" if cur < 240 else ("pista-naranja" if cur < 360 else "pista-roja")))
+            
+            # Lógica de clases CSS
+            if not j['p']:
+                cl_base = "banquillo"
+            else:
+                cl_base = "en-pista " + ("pista-portero" if es_p else ("pista-verde" if cur < 240 else ("pista-naranja" if cur < 360 else "pista-roja")))
             
             st.markdown(f"""
-                <div class='card {cl}'>
+                <div class='card {cl_base}'>
                     <div class='player-name'>{j['n']}</div>
                     <div class='time-large'>{int(cur//60):02d}:{int(cur%60):02d}</div>
                     <div class='time-total'>Σ {int(tot//60):02d}:{int(tot%60):02d} | ⚽ {j['g']}</div>
@@ -143,7 +156,7 @@ with t1:
                 st.rerun()
 
 with t2:
-    st.subheader("⚠️ Registro de Incidencias (Tarjetas y Faltas)")
+    st.subheader("⚠️ Registro de Incidencias")
     cl1, cl2 = st.columns(2)
     with cl1:
         st.markdown("### LUD")
@@ -159,14 +172,14 @@ with t2:
         if st.button(f"🟥 Roja {s.rv}", use_container_width=True): s.eventos.append({'Tiempo': min_act, 'Evento': f'🟥 Roja {s.rv} (#{d_tar})', 'Cuarteto': get_cuarteto()})
 
 with t3:
-    st.subheader("📊 Totales del Encuentro")
+    st.subheader("📊 Totales")
     res = [{"Jugador": j['n'], "Goles": j['g'], "Tiempo": f"{int(j['tot']//60):02d}:{int(j['tot']%60):02d}", "Rotaciones": j['r']} for j in s.js]
     st.table(pd.DataFrame(res))
 
 with t4:
-    st.subheader("📜 Historial Detallado")
+    st.subheader("📜 Historial")
     if s.eventos: st.table(pd.DataFrame(s.eventos[::-1]))
-    else: st.info("Sin eventos registrados.")
+    else: st.info("Sin eventos.")
 
 with t5:
     s.rv = st.text_input("Nombre Rival", s.rv).upper()
