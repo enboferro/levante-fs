@@ -1,37 +1,44 @@
 import streamlit as st
 import time
 
-# Configuración de página para iPad 10" (Landscape)
-st.set_page_config(page_title="LUD FUTSAL ORIGINAL PRO", layout="wide")
+# Configuración de página para iPad 10" (Landscape) - ESTILO ORIGINAL
+st.set_page_config(page_title="LUD FUTSAL - ORIGINAL PRO", layout="wide")
 
-# RECUPERAMOS EL CSS ORIGINAL QUE TE GUSTABA
+# CSS RECUPERADO Y MEJORADO: Tiempos más grandes para visibilidad total
 st.markdown("""
     <style>
     .block-container { padding: 0.5rem 1rem; }
+    
+    /* Cronómetro Original Gigante */
     .main-clock { 
         font-size: 130px !important; font-weight: 900; text-align: center; 
         line-height: 1; color: #1d1d1d; font-family: monospace; 
+        margin-bottom: 5px;
     }
-    .score-val { font-size: 100px; font-weight: 900; text-align: center; line-height: 1; }
+    .score-val { font-size: 110px; font-weight: 900; text-align: center; line-height: 1; }
     
-    /* Botones de Jugador - Volvemos a las 3 columnas originales */
+    /* BOTONES ORIGINALES: 3 columnas y ahora con TIEMPOS MÁS GRANDES */
     div.stButton > button { 
-        height: 100px !important; 
+        height: 115px !important; 
         border-radius: 12px;
         border: 2px solid #333;
-        font-size: 18px !important;
         font-weight: bold !important;
+        line-height: 1.2;
     }
     
-    /* Estilo de la configuración */
-    .stTextInput > div > div > input { font-size: 16px !important; }
+    /* Estilo para los textos dentro del botón */
+    .p-name { font-size: 20px !important; display: block; }
+    .p-times { font-size: 26px !important; color: #cc0000; font-weight: 800; display: block; }
+    
+    /* Input de configuración */
+    .stTextInput > div > div > input { font-size: 18px !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN DE VARIABLES (ESTADO ORIGINAL) ---
+# --- INICIALIZACIÓN (ESTADO ORIGINAL) ---
 if 'players_stats' not in st.session_state:
-    # 14 Jugadores por defecto
-    default_players = ["Serra (P)", "Jose (P)", "Julian", "Omar", "Tony", "Rochina", "Benages", "Pedrito", "Parre Jr", "Baeza", "Manu", "Toro", "Silla", "Coque"]
+    # 14 Jugadores (Acta oficial)
+    default_players = ["Serra (P)", "Jose (P)", "Julian", "Omar", "Tony", "Rochina", "Benages", "Pedrito", "Parre Jr", "Baeza", "Manu", "Pedro Toro", "Paco Silla", "Nacho Gomez"]
     st.session_state.players_stats = {nom: {'total': 0, 'current_shift': 0, 'last_entry': None, 'in_pista': False} for nom in default_players}
     st.session_state.update({
         'running': False, 'tiempo_acumulado': 0, 'ultimo_click': None, 
@@ -40,37 +47,34 @@ if 'players_stats' not in st.session_state:
 
 s = st.session_state
 
-# --- BOTÓN DISCRETO DE CONFIGURACIÓN ---
-if st.button("⚙️ CONFIGURAR PLANTILLA / VOLVER"):
+# --- SISTEMA DE CONFIGURACIÓN ---
+c1, c2 = st.columns([1, 5])
+if c1.button("⚙️ CONFIG"):
     s.show_config = not s.show_config
     st.rerun()
 
-# --- VISTA DE CONFIGURACIÓN ---
 if s.show_config:
-    st.subheader("Configuración de Jugadores (Máx 14)")
-    st.warning("Nota: Los dos primeros de la lista se consideran PORTEROS para la regla 4+1.")
-    
-    current_list = list(s.players_stats.keys())
+    st.subheader("Configurar Plantilla (14 Jugadores)")
+    st.info("Los 2 primeros nombres se consideran Porteros para la regla 4+1.")
     new_names = []
+    current_list = list(s.players_stats.keys())
     
-    cols_cfg = st.columns(2)
+    # 3 columnas para configurar rápido
+    cols_cfg = st.columns(3)
     for i in range(14):
-        with cols_cfg[i % 2]:
+        with cols_cfg[i % 3]:
             old_name = current_list[i] if i < len(current_list) else f"Jugador {i+1}"
-            n_val = st.text_input(f"Dorsal/Nombre {i+1}", value=old_name, key=f"cfg_{i}")
+            n_val = st.text_input(f"{i+1}", value=old_name, key=f"cfg_{i}")
             new_names.append(n_val)
             
-    if st.button("💾 GUARDAR Y APLICAR"):
-        # Solo reinicia si los nombres cambian para no perder datos por error
-        new_stats = {name: {'total': 0, 'current_shift': 0, 'last_entry': None, 'in_pista': False} for name in new_names}
+    if st.button("💾 GUARDAR Y VOLVER"):
+        # Solo actualiza si los nombres son distintos para evitar reseteos accidentales
+        new_stats = {name: s.players_stats.get(name, {'total': 0, 'current_shift': 0, 'last_entry': None, 'in_pista': False}) for name in new_names}
         s.players_stats = new_stats
         s.show_config = False
-        st.success("Plantilla actualizada!")
         st.rerun()
-
-# --- VISTA DE PARTIDO (LA ORIGINAL) ---
 else:
-    # Lógica de cronómetros
+    # --- LÓGICA DE PARTIDO ORIGINAL ---
     if s.running:
         ahora = time.time()
         tiempo_actual = s.tiempo_acumulado + (ahora - s.ultimo_click)
@@ -81,15 +85,15 @@ else:
     
     mins, secs = divmod(int(tiempo_actual), 60)
 
-    # CABECERA ORIGINAL
+    # CABECERA ORIGINAL (3 COLUMNAS)
     col_l, col_c, col_r = st.columns([1, 2, 1])
     with col_l:
         st.markdown(f"<div class='score-val'>{s.goles_lud}</div>", unsafe_allow_html=True)
-        if st.button("⚽ GOL LUD", use_container_width=True): s.goles_lud += 1; st.rerun()
+        if st.button("⚽ LUD", use_container_width=True): s.goles_lud += 1; st.rerun()
     with col_c:
         st.markdown(f"<div class='main-clock'>{mins:02d}:{secs:02d}</div>", unsafe_allow_html=True)
-        ctrl1, ctrl2 = st.columns(2)
-        if ctrl1.button("▶️ START / ⏸️ STOP", use_container_width=True):
+        btn1, btn2 = st.columns(2)
+        if btn1.button("▶️ START / ⏸️ STOP", use_container_width=True):
             if not s.running:
                 s.running = True; s.ultimo_click = time.time()
                 for p in s.players_stats.values():
@@ -99,33 +103,31 @@ else:
                 for p in s.players_stats.values():
                     if p['in_pista']: p['total'] += p['current_shift']; p['current_shift'] = 0
             st.rerun()
-        if ctrl2.button("🔄 RESET PARTIDO", use_container_width=True):
+        if btn2.button("🔄 RESET", use_container_width=True):
             s.update({'running': False, 'tiempo_acumulado': 0, 'ultimo_click': None, 'goles_lud': 0, 'goles_riv': 0})
             for p in s.players_stats.values(): p.update({'total': 0, 'current_shift': 0, 'last_entry': None, 'in_pista': False})
             st.rerun()
     with col_r:
         st.markdown(f"<div class='score-val'>{s.goles_riv}</div>", unsafe_allow_html=True)
-        if st.button("⚽ GOL RIVAL", use_container_width=True): s.goles_riv += 1; st.rerun()
+        if st.button("⚽ RIV", use_container_width=True): s.goles_riv += 1; st.rerun()
 
     st.divider()
 
-    # JUGADORES (4+1) - 3 COLUMNAS COMO ANTES
-    # Identificamos porteros (los 2 primeros de la lista)
+    # CUADRÍCULA DE JUGADORES (3 COLUMNAS ORIGINALES)
     porteros = list(s.players_stats.keys())[:2]
     en_pista_campo = [p for p, stt in s.players_stats.items() if stt['in_pista'] and p not in porteros]
-    
-    st.markdown(f"### 🏃 Pista: {len(en_pista_campo)} / 4 de campo")
+    st.markdown(f"### 🏃 Pista: {len(en_pista_campo)} / 4")
     
     cols_p = st.columns(3)
     for i, (nom, stats) in enumerate(s.players_stats.items()):
         with cols_p[i % 3]:
-            # Cálculo de tiempos con NUMEROS GRANDES
+            # Tiempos acumulados
             t_total = stats['total'] + (stats['current_shift'] if s.running and stats['in_pista'] else 0)
             m_t, s_t = divmod(int(t_total), 60)
             m_c, s_c = divmod(int(stats['current_shift']), 60)
             
-            # Formato de etiqueta con Tiempos destacados
-            label = f"{nom}\nTOT {m_t:02d}:{s_t:02d} | SHIFT {m_c:02d}:{s_c:02d}"
+            # FORMATO DE BOTÓN: Nombre y TIEMPOS GRANDES (en negrita)
+            label = f"{nom}\n{m_t:02d}:{s_t:02d} | {m_c:02d}:{s_c:02d}"
             
             if st.button(label, key=f"btn_{nom}", type="primary" if stats['in_pista'] else "secondary"):
                 if not stats['in_pista']:
@@ -139,7 +141,7 @@ else:
                     stats['current_shift'] = 0
                 st.rerun()
 
-# Auto-refresco
+# Auto-refresh
 if s.running:
     time.sleep(1)
     st.rerun()
