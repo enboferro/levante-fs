@@ -44,13 +44,14 @@ st.markdown("""
 
 # --- INICIALIZACIÓN ---
 if 'js' not in st.session_state:
-    n = ["Serra","Julian","Omar","Tony","Rochina","Benages","Pedrito","Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Jose","Coque","Nacho Gomez"]
+    n = ["Serra","Jose","Julian","Omar","Tony","Rochina","Benages","Pedrito","Parre Jr","Baeza","Manu","Pedro Toro","Paco Silla","Coque","Nacho Gomez"]
     st.session_state.update({
         "js": [{"n":x,"tt":0.0,"tot":0.0,"r":0,"i":None,"p":False} for x in n],
         "eventos": [], "pm_ok": 0, "pm_err": 0, "pp_ok": 0, "pp_err": 0, 
         "al": 0, "rl": 0, "ar": 0, "rr": 0, "ml": 0, "mr": 0, "fl": 0, "fr": 0, 
         "ta": 0.0, "ic": None, "on": False, "rv": "RIVAL", "lugar": "Pabellón", "fecha": datetime.now().date(),
-        "tm": False, "tm_i": None, "analisis_goles": [], "periodo": "1ª PARTE", "finalizado": False
+        "tm": False, "tm_i": None, "analisis_goles": [], "periodo": "1ª PARTE", "finalizado": False,
+        "porteros": ["Serra", "Jose"] # Definición inicial de porteros
     })
 
 s = st.session_state
@@ -70,12 +71,12 @@ def toggle_timer():
         if tr_total < 1200:
             s.ic, s.on = now, True
             for j in s.js: 
-                if j["p"] and j["n"] not in ["Serra", "Jose"]: j["i"] = now
+                if j["p"] and j["n"] not in s.porteros: j["i"] = now
     else:
         s.ta += now - s.ic
         s.on, s.ic = False, None
         for j in s.js:
-            if j["p"] and j["i"] and j["n"] not in ["Serra", "Jose"]:
+            if j["p"] and j["i"] and j["n"] not in s.porteros:
                 d = now - j["i"]; j["tot"] += d; j["tt"] += d; j["i"] = None
 
 def finalizar_fase():
@@ -90,7 +91,7 @@ def finalizar_fase():
 def capturar_tactico(tipo, detalle):
     cuarteto = []
     for j in s.js:
-        if j['p'] and j['n'] not in ["Serra", "Jose"]:
+        if j['p'] and j['n'] not in s.porteros:
             t_r = j["tt"] + (ah - j["i"] if s.on and j["i"] else 0)
             mj, sj = divmod(int(t_r), 60)
             cuarteto.append(f"{j['n']} ({mj:02d}:{sj:02d})")
@@ -128,12 +129,12 @@ with t1:
     st.markdown("---")
     
     # Contador de jugadores de campo actualmente en pista
-    jugadores_campo_pista = sum(1 for j in s.js if j['p'] and j['n'] not in ["Serra", "Jose"])
+    jugadores_campo_pista = sum(1 for j in s.js if j['p'] and j['n'] not in s.porteros)
     
     cols = st.columns(5)
     for i, j in enumerate(s.js):
         with cols[i%5]:
-            es_p = j['n'] in ["Serra", "Jose"]
+            es_p = j['n'] in s.porteros
             cur = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             tot = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             cl = "banquillo" if not j['p'] else ("pista-portero" if es_p else ("pista-verde" if cur < 240 else ("pista-naranja" if cur < 360 else "pista-roja")))
@@ -213,14 +214,42 @@ with t4:
                       "Valor": [s.rv, s.fecha.strftime("%d/%m/%Y"), s.lugar, s.ml, s.mr, s.fl, s.fr]}).to_excel(writer, sheet_name='Resumen', index=False)
         if s.eventos: pd.DataFrame(s.eventos).to_excel(writer, sheet_name='Historial', index=False)
         if s.analisis_goles: pd.DataFrame(s.analisis_goles).to_excel(writer, sheet_name='Análisis Goles', index=False)
-        data_j = [{"Jugador": x["n"], "Min Tot": f"{int(x['tot']//60):02d}:{int(x['tot']%60):02d}", "Rotaciones": x["r"]} for x in s.js if x["n"] not in ["Serra", "Jose"]]
+        data_j = [{"Jugador": x["n"], "Min Tot": f"{int(x['tot']//60):02d}:{int(x['tot']%60):02d}", "Rotaciones": x["r"]} for x in s.js if x["n"] not in s.porteros]
         pd.DataFrame(data_j).to_excel(writer, sheet_name='Jugadores', index=False)
     
     file_name = f"LUD-vs-{s.rv.replace(' ', '_')}({s.fecha.strftime('%d-%m-%Y')}).xlsx"
     st.download_button(label=f"📥 DESCARGAR {file_name}", data=buf.getvalue(), file_name=file_name, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
 with t5:
-    st.subheader("Configuración del Encuentro")
+    st.subheader("⚙️ Configuración de Plantilla")
+    
+    # Editor de Nombres de Jugadores
+    st.write("Edite los nombres de los jugadores. **Los dos primeros nombres se consideran PORTEROS** para la regla 4+1.")
+    
+    col_cfg1, col_cfg2 = st.columns(2)
+    new_names = []
+    
+    # Creamos un formulario de entrada para 14-15 jugadores
+    for i in range(len(s.js)):
+        col = col_cfg1 if i < 8 else col_cfg2
+        with col:
+            # Marcamos visualmente cuáles son los porteros
+            label = f"Jugador {i+1} (Portero)" if i < 2 else f"Jugador {i+1}"
+            n_name = st.text_input(label, value=s.js[i]['n'], key=f"input_n_{i}")
+            new_names.append(n_name)
+
+    if st.button("💾 ACTUALIZAR NOMBRES Y PORTEROS"):
+        # Actualizar nombres en la sesión
+        for i, name in enumerate(new_names):
+            s.js[i]['n'] = name
+        
+        # Actualizar quiénes son los porteros (los 2 primeros)
+        s.porteros = [new_names[0], new_names[1]]
+        st.success("Plantilla actualizada con éxito.")
+        st.rerun()
+
+    st.markdown("---")
+    st.subheader("Datos del Encuentro")
     s.rv = st.text_input("Nombre del Rival", s.rv).upper()
     s.lugar = st.text_input("Lugar del Partido", s.lugar)
     s.fecha = st.date_input("Fecha del Partido", s.fecha)
