@@ -2,12 +2,34 @@ import streamlit as st
 import pandas as pd
 import time
 import io
+from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="LUD Match Control v35.2", layout="wide")
 
-# --- CSS CON CONTRASTE DINÁMICO Y CABECERA AMPLIADA ---
+# --- INICIALIZACIÓN (Mover al principio para evitar el AttributeError) ---
+if 'js' not in st.session_state:
+    n_iniciales = ["Serra", "Jose", "Julian", "Omar", "Tony", "Rochina", "Benages", "Pedrito", "Parre Jr", "Baeza", "Manu", "Toro", "Silla", "Coque"]
+    st.session_state.update({
+        "js": [{"n":x,"tt":0.0,"tot":0.0,"r":0,"g":0,"i":None,"p":False} for x in n_iniciales],
+        "eventos": [], "ml": 0, "mr": 0, "fl": 0, "fr": 0, 
+        "ta": 0.0, "ic": None, "on": False, 
+        "rv": "RIVAL", 
+        "ciudad": "VALENCIA", 
+        "fecha": datetime.now().strftime("%d/%m/%Y"),
+        "periodo": "1ª PARTE", "finalizado": False,
+        "porteros": [n_iniciales[0], n_iniciales[1]],
+        "show_config": False
+    })
+
+# Seguridad adicional: Si por alguna razón ciudad o fecha no están (sesiones viejas)
+if "ciudad" not in st.session_state: st.session_state.ciudad = "VALENCIA"
+if "fecha" not in st.session_state: st.session_state.fecha = datetime.now().strftime("%d/%m/%Y")
+
+s = st.session_state
+
+# --- CSS CON CONTRASTE DINÁMICO ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;900&display=swap');
@@ -18,7 +40,7 @@ st.markdown("""
         background: #4B2E2A; padding: 5px; border-radius: 8px 8px 0 0;
         color: white; text-align: center; margin-bottom: 0px;
     }
-    .match-info-sub { font-size: 0.8rem; font-weight: 400; opacity: 0.9; margin-bottom: 2px; }
+    .match-info-sub { font-size: 0.9rem; font-weight: 400; opacity: 0.9; margin-bottom: 2px; }
     .score-number { font-size: 2.5rem !important; font-weight: 900; font-family: 'Roboto Mono'; line-height: 1; }
     .stadium-clock { font-family: 'Roboto Mono'; font-size: 3rem !important; font-weight: 700; line-height: 1; }
     
@@ -51,20 +73,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN ---
-if 'js' not in st.session_state:
-    n = ["Serra", "Jose", "Julian", "Omar", "Tony", "Rochina", "Benages", "Pedrito", "Parre Jr", "Baeza", "Manu", "Toro", "Silla", "Coque"]
-    st.session_state.update({
-        "js": [{"n":x,"tt":0.0,"tot":0.0,"r":0,"g":0,"i":None,"p":False} for x in n],
-        "eventos": [], "ml": 0, "mr": 0, "fl": 0, "fr": 0, 
-        "ta": 0.0, "ic": None, "on": False, 
-        "rv": "RIVAL", "ciudad": "VALENCIA", "fecha": datetime.now().strftime("%d/%m/%Y"),
-        "periodo": "1ª PARTE", "finalizado": False,
-        "porteros": [n[0], n[1]]
-    })
-
-s = st.session_state
-st_autorefresh(1000, key="refresh_lud_v35_2")
+st_autorefresh(1000, key="refresh_lud_v35_final")
 ah = time.time()
 tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr_total); mv, sv = divmod(int(rem), 60)
@@ -94,7 +103,7 @@ t1, t2, t3, t4, t5 = st.tabs(["🎮 PARTIDO", "⚠️ INCIDENCIAS", "📊 TOTALE
 with t1:
     st.markdown(f"""
         <div class="scoreboard-container">
-            <div class="match-info-sub">{s.fecha} - {s.ciudad}</div>
+            <div class="match-info-sub">{s.fecha} — {s.ciudad}</div>
             <span class="score-number">{s.ml}</span>
             <span class="stadium-clock">&nbsp;&nbsp;{mv:02d}:{sv:02d}&nbsp;&nbsp;</span>
             <span class="score-number">{s.mr}</span>
@@ -120,7 +129,11 @@ with t1:
             es_p = j['n'] in s.porteros
             cur = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
             tot = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-            cl = "banquillo" if not j['p'] else ("en-pista " + ("pista-portero" if es_p else ("pista-verde" if cur < 240 else ("pista-naranja" if cur < 360 else "pista-roja"))))
+            
+            if not j['p']:
+                cl = "banquillo"
+            else:
+                cl = "en-pista " + ("pista-portero" if es_p else ("pista-verde" if cur < 240 else ("pista-naranja" if cur < 360 else "pista-roja")))
             
             st.markdown(f"""
                 <div class='card {cl}'>
@@ -183,7 +196,8 @@ with t5:
     st.write("### Plantilla (14 Jugadores)")
     new_names = []
     cols_cfg = st.columns(2)
-    for i in range(14):
+    for i in range(len(s.js)):
+        if i >= 14: break
         with (cols_cfg[0] if i < 7 else cols_cfg[1]):
             n_val = st.text_input(f"Jugador {i+1}", value=s.js[i]['n'], key=f"cfg_{i}")
             new_names.append(n_val)
@@ -193,4 +207,6 @@ with t5:
         s.porteros = [new_names[0], new_names[1]]
         st.rerun()
 
-    if st.button("🗑️ RESET TOTAL"): st.session_state.clear(); st.rerun()
+    if st.button("🗑️ RESET TOTAL"): 
+        st.session_state.clear()
+        st.rerun()
