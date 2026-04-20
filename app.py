@@ -18,7 +18,7 @@ if 'js' not in st.session_state:
         "rv": "RIVAL", "ciudad": "VALENCIA", "fecha": datetime.now().strftime("%d/%m/%Y"),
         "periodo": "1ª PARTE", "finalizado": False,
         "porteros": [n_iniciales[0], n_iniciales[1]],
-        "datos_1t": None # Para guardar el resumen de la primera parte
+        "datos_1t": None 
     })
 
 s = st.session_state
@@ -137,7 +137,7 @@ with tabs[1]:
         if st.button(f"🟥 Roja {s.rv}"): s.eventos.append({'Tiempo': min_act, 'Evento': f'🟥 Roja {s.rv} (#{d_tar})', 'Cuarteto': get_cuarteto()})
 
 with tabs[2]:
-    st.subheader("📊 Totales y Resumen de Tiempos")
+    st.subheader("📊 Totales y Resumen")
     if s.datos_1t:
         d1 = s.datos_1t
         st.info(f"**Resumen 1ª PARTE:** Goles: {d1['goles_lud']}-{d1['goles_riv']} | Faltas: {d1['faltas_lud']}-{d1['faltas_riv']}")
@@ -152,20 +152,23 @@ with tabs[3]:
 
 with tabs[4]:
     st.subheader("📥 Exportar Datos")
-    # Lógica corregida para generar el Excel
+    # Buffer para el Excel
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        pd.DataFrame([{"Rival": s.rv, "Ciudad": s.ciudad, "Fecha": s.fecha, "Goles LUD": s.ml, "Goles Rival": s.mr}]).to_excel(writer, sheet_name='General', index=False)
-        pd.DataFrame([{"Jugador": j['n'], "Goles": j['g'], "Min_Totales": round(j['tot']/60, 2), "Rotaciones": j['r']} for j in s.js]).to_excel(writer, sheet_name='Jugadores', index=False)
-        if s.eventos: pd.DataFrame(s.eventos).to_excel(writer, sheet_name='Historial', index=False)
-    
-    processed_data = output.getvalue()
-    st.download_button(
-        label="📥 DESCARGAR EXCEL COMPLETO",
-        data=processed_data,
-        file_name=f"Acta_{s.rv}_{s.fecha}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    # Usamos engine 'xlsxwriter'
+    try:
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            pd.DataFrame([{"Rival": s.rv, "Ciudad": s.ciudad, "Fecha": s.fecha, "Goles LUD": s.ml, "Goles Rival": s.mr}]).to_excel(writer, sheet_name='General', index=False)
+            pd.DataFrame([{"Jugador": j['n'], "Goles": j['g'], "Min_Totales": round(j['tot']/60, 2), "Rotaciones": j['r']} for j in s.js]).to_excel(writer, sheet_name='Jugadores', index=False)
+            if s.eventos: pd.DataFrame(s.eventos).to_excel(writer, sheet_name='Historial', index=False)
+        
+        st.download_button(
+            label="📥 DESCARGAR EXCEL COMPLETO",
+            data=output.getvalue(),
+            file_name=f"LUD_Vs_{s.rv}_{s.fecha}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    except Exception as e:
+        st.error(f"Error al generar Excel: {e}. Asegúrate de que 'xlsxwriter' esté en requirements.txt")
 
 with tabs[5]:
     st.subheader("⚙️ Configuración")
