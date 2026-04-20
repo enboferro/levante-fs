@@ -1,154 +1,176 @@
 import streamlit as st
 import pandas as pd
-import time
-import io
+import time, io
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-# --- CONFIGURACIÓN ---
-st.set_page_config(page_title="LUD Control v37.1", layout="wide")
+st.set_page_config(page_title="Don Bosco Salesianos 11-inch", layout="wide")
 
-# --- INICIALIZACIÓN ---
-if 'js' not in st.session_state:
-    n_iniciales = ["Serra", "Jose", "Julian", "Omar", "Tony", "Rochina", "Benages", "Pedrito", "Parre Jr", "Baeza", "Manu", "Toro", "Silla", "Coque"]
-    st.session_state.update({
-        "js": [{"n":x,"tt":0.0,"tot":0.0,"r":0,"g":0,"i":None,"p":False} for x in n_iniciales],
-        "eventos": [], "ml": 0, "mr": 0, "fl": 0, "fr": 0, 
-        "pm_ok": 0, "pm_err": 0, "pp_ok": 0, "pp_err": 0,
-        "ta": 0.0, "ic": None, "on": False, 
-        "rv": "RIVAL", "ciudad": "VALENCIA", "fecha": datetime.now().strftime("%d/%m/%Y"),
-        "periodo": "1ª PARTE", "finalizado": False,
-        "porteros": [n_iniciales[0], n_iniciales[1]],
-    })
-
-s = st.session_state
-
-# --- CSS ---
+# --- CSS ULTRA-REDUCIDO CON ESCUDO OFICIAL ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;900&display=swap');
-    html, body, [class*="css"] { font-family: 'Roboto', sans-serif; background-color: #f0f2f6; }
-    .block-container { padding: 0.1rem 0.5rem !important; }
-    .scoreboard-container { background: #4B2E2A; padding: 5px; border-radius: 8px 8px 0 0; color: white; text-align: center; }
-    .score-number { font-size: 2.5rem !important; font-weight: 900; font-family: 'Roboto Mono'; line-height: 1; }
-    .stadium-clock { font-family: 'Roboto Mono'; font-size: 3rem !important; font-weight: 700; line-height: 1; }
-    .card { border-radius: 6px; padding: 4px; text-align: center; border: 1px solid #333; margin-bottom: 2px; height: 100px; display: flex; flex-direction: column; justify-content: center; }
-    .player-name { font-size: 0.8rem !important; font-weight: 900 !important; text-transform: uppercase; margin-bottom: 1px; }
-    .banquillo { background-color: #D1D1D1 !important; color: #000 !important; }
-    .en-pista { color: #FFF !important; }
-    .time-large { font-size: 1.9rem !important; font-weight: 900 !important; font-family: 'Roboto Mono'; line-height: 1; }
-    .pista-portero { background-color: #008080 !important; }
-    .pista-verde { background-color: #28a745 !important; }
-    .pista-roja { background-color: #dc3545 !important; animation: blinker 0.8s linear infinite; }
-    @keyframes blinker { 50% { opacity: 0.7; } }
-    .stButton > button { height: 28px !important; font-size: 0.7rem !important; border-radius: 3px; font-weight: bold !important; padding: 0px !important; }
-    .porteria-section { background: #ffffff; padding: 8px; border-radius: 8px; border: 2px solid #4B2E2A; margin-top: 10px; }
+    @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;700;900&display=swap');
+    
+    /* Reset total de márgenes */
+    html, body, [class*="css"] { font-family: 'Roboto', sans-serif; background-color: #f8f9fa; overflow: hidden; }
+    .block-container { padding: 0.1rem !important; max-width: 100% !important; }
+    [data-testid="stVerticalBlock"] > div { gap: 0rem !important; }
+
+    .header-container {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        padding: 1px 2px; background: white; border-radius: 0 0 10px 10px;
+    }
+
+    .stadium-clock {
+        font-family: 'Roboto Mono', monospace;
+        font-size: 4.5rem !important;
+        font-weight: 700; color: #004a99;
+        line-height: 0.8; text-align: center; margin: 1px 0;
+    }
+
+    /* Botón START más pequeño */
+    div.stButton > button[key="tm_m"] {
+        width: 100% !important; max-width: 280px !important;
+        height: 42px !important; background-color: #004a99 !important;
+        color: white !important; border-radius: 10px !important;
+        font-size: 1.1rem !important; font-weight: 900 !important;
+        margin: 0 auto !important; display: block !important;
+        padding: 0 !important;
+    }
+
+    .horizontal-timeline {
+        display: flex; overflow-x: auto; background: white;
+        padding: 1px 2px; border-radius: 5px; margin: 1px 0;
+        border: 1px solid #ddd; gap: 3px;
+    }
+
+    /* Fichas minúsculas */
+    .pista-activa { background-color: #28a745 !important; color: white !important; border-radius: 6px; padding: 2px; text-align: center; }
+    .banquillo-espera { background-color: #dc3545 !important; color: white !important; border-radius: 6px; padding: 2px; text-align: center; }
+    
+    /* Reducción de botones de cambio */
+    div.stButton > button[key^="c_"] { height: 1.6em !important; font-size: 0.7rem !important; padding: 0 !important; margin-top: 1px !important;}
+
+    .footer-control {
+        background-color: #ffffff; padding: 2px 4px;
+        border-radius: 8px 8px 0 0; border-top: 1px solid #ddd;
+        margin-top: 1px;
+    }
+    
+    /* Ajuste de métricas */
+    [data-testid="stMetricValue"] { font-size: 1.3rem !important; line-height: 1 !important;}
+    [data-testid="stMetricLabel"] { font-size: 0.7rem !important; }
+    div[data-testid="stMetricValue"] > div { display: flex; align-items: center; justify-content: center; }
     </style>
     """, unsafe_allow_html=True)
 
-st_autorefresh(1000, key="refresh_v37_1")
+if 'js' not in st.session_state:
+    n = ["Jugador 1","Jugador 2","Jugador 3","Jugador 4","Jugador 5","Jugador 6","Jugador 7","Jugador 8","Jugador 9","Jugador 10","Jugador 11","Jugador 12"]
+    st.session_state.update({
+        "js": [{"n":x,"tt":0.0,"tot":0.0,"r":0,"i":None,"p":False} for x in n],
+        "eventos": [], "pm": 0, "pp": 0, "al": 0, "rl": 0, "ar": 0, "rr": 0, 
+        "ml": 0, "mr": 0, "fl": 0, "fr": 0, "ta": 0.0, "ic": None, "on": False, 
+        "pa": "1T", "rv": "RIVAL", "tm": False, "tm_i": None, "t1_abs": 0.0, "t2_abs": 0.0
+    })
+
+s = st.session_state
+st_autorefresh(1000, key="f5_db_salesianos_slim")
+
 ah = time.time()
-tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
-rem = max(0, 1200 - tr_total); mv, sv = divmod(int(rem), 60)
-min_act = f"{s.periodo} {mv:02d}:{sv:02d}"
+tr = s.ta + (ah - s.ic if s.on and s.ic else 0)
+rem = max(0, 1200 - tr)
+min_act = int((tr if s.pa=="1T" else tr+1200) // 60)
 
-def get_cuarteto():
-    pista = [j['n'] for j in s.js if j['p'] and j['n'] not in s.porteros]
-    while len(pista) < 4: pista.append("-")
-    return ", ".join(pista[:4])
+if s.on:
+    if s.pa == "1T": s.t1_abs = tr
+    else: s.t2_abs = tr
 
-def toggle_timer():
-    now = time.time()
-    if not s.on:
-        if tr_total < 1200: s.ic, s.on = now, True
-        for j in s.js: 
-            if j["p"] and j["n"] not in s.porteros: j["i"] = now
-    else:
+tm_sec = max(0, 60 - int(ah - s.tm_i)) if s.tm and s.tm_i else 0
+if s.tm and tm_sec == 0: s.tm = False
+
+def stop_match():
+    if s.on:
+        now = time.time()
         s.ta += now - s.ic; s.on, s.ic = False, None
         for j in s.js:
-            if j["p"] and j["i"] and j["n"] not in s.porteros:
+            if j["p"] and j["i"]:
                 d = now - j["i"]; j["tot"] += d; j["tt"] += d; j["i"] = None
 
-# --- UI ---
-tabs = st.tabs(["🎮 PARTIDO", "📊 TOTALES", "📜 HISTORIAL", "📥 EXPORTAR", "⚙️ CONFIG"])
+# CABECERA CON ESCUDO OFICIAL
+st.markdown(f'<div class="header-container"><img src="https://i.ibb.co/vzN44Pj/image-0.png" width="28"><b style="color:#004a99; font-size:0.9rem; margin-left: 2px;">C.D. DON BOSCO - SALESIANOS</b></div>', unsafe_allow_html=True)
 
-with tabs[0]:
-    st.markdown(f"""<div class="scoreboard-container"><div style="font-size:0.7rem;">{s.fecha} — {s.ciudad}</div><span class="score-number">{s.ml}</span><span class="stadium-clock">&nbsp;&nbsp;{mv:02d}:{sv:02d}&nbsp;&nbsp;</span><span class="score-number">{s.mr}</span></div>""", unsafe_allow_html=True)
-    
-    cf1, cf2, cf3, cf4, cf5, cf6 = st.columns([1,1,2,2,1,1])
-    if cf1.button("➖", key="fl_m"): s.fl = max(0, s.fl-1); st.rerun()
-    if cf2.button("➕", key="fl_p"): s.fl += 1; s.eventos.append({'Minuto': min_act, 'Evento': 'FALTA LUD', 'Cuarteto': None}); st.rerun()
-    cf3.markdown(f"<div style='text-align:right; color:#FFCC00; font-weight:900;'>LUD: {s.fl}</div>", unsafe_allow_html=True)
-    cf4.markdown(f"<div style='text-align:left; color:#FFCC00; font-weight:900;'>{s.rv[:5]}: {s.fr}</div>", unsafe_allow_html=True)
-    if cf5.button("➕", key="fr_p"): s.fr += 1; s.eventos.append({'Minuto': min_act, 'Evento': f'FALTA {s.rv}', 'Cuarteto': None}); st.rerun()
-    if cf6.button("➖", key="fr_m"): s.fr = max(0, s.fr-1); st.rerun()
+# CRONO
+if s.tm: st.markdown(f"<div class='stadium-clock' style='color:#FF9800; font-size: 3.5rem !important;'>{tm_sec}s</div>", unsafe_allow_html=True)
+else:
+    m, sec = divmod(int(rem), 60)
+    st.markdown(f"<div class='stadium-clock'>{m:02d}:{sec:02d}</div>", unsafe_allow_html=True)
 
-    c_top = st.columns([2, 1, 1, 1])
-    if c_top[0].button("▶ START / PAUSE ⏸", use_container_width=True, type="primary"): toggle_timer(); st.rerun()
-    with c_top[1]: d_riv = st.number_input("Rival", 1, 99, key="dg", label_visibility="collapsed")
-    if c_top[2].button(f"⚽ GOL {s.rv[:3]}", use_container_width=True):
-        s.mr += 1; s.eventos.append({'Minuto': min_act, 'Evento': f'⚽ GOL {s.rv} (#{d_riv})', 'Cuarteto': get_cuarteto()}); st.rerun()
-    if c_top[3].button("🏁 PERIODO", use_container_width=True):
-        if s.on: toggle_timer()
-        if s.periodo == "1ª PARTE": s.periodo = "2ª PARTE"; s.ta = 0.0; s.fl, s.fr = 0, 0
-        else: s.finalizado = True
-        st.rerun()
+if st.button("▶ START / STOP ⏸", key="tm_m"):
+    if not s.on:
+        s.ic, s.on, s.tm = ah, True, False
+        for j in s.js: 
+            if j["p"]: j["i"]=ah
+    else: stop_match()
+    st.rerun()
 
-    jugadores_activos = [j for j in s.js if j['n'].strip() != ""]
-    cols = st.columns(3)
-    p_count = sum(1 for j in jugadores_activos if j['p'] and j['n'] not in s.porteros)
-    
-    for idx, j in enumerate(jugadores_activos):
-        with cols[idx % 3]:
-            es_p = j['n'] in s.porteros
-            cur, tot = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0), j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-            cl = "banquillo" if not j['p'] else ("en-pista " + ("pista-portero" if es_p else ("pista-verde" if cur < 240 else "pista-roja")))
-            st.markdown(f"<div class='card {cl}'><div class='player-name'>{j['n']}</div><div class='time-large'>{int(cur//60):02d}:{int(cur%60):02d}</div><div style='font-size:0.65rem;'>Σ {int(tot//60):02d}:{int(tot%60):02d} | ⚽ {j['g']}</div></div>", unsafe_allow_html=True)
-            b1, b2, b3, b4 = st.columns([1.5, 1, 0.8, 0.8])
-            if b1.button("🔄", key=f"c_{idx}", use_container_width=True):
-                if not j["p"]:
-                    if es_p or p_count < 4:
-                        j["p"] = True
-                        if not es_p: j["i"], j["r"], j["tt"] = (ah if s.on else None), j["r"]+1, 0.0
-                else:
-                    if not es_p and s.on and j["i"]: d_t = ah - j["i"]; j["tot"] += d_t; j["tt"] += d_t
-                    j["p"], j["i"] = False, None
-                st.rerun()
-            if b2.button("⚽", key=f"g_{idx}", use_container_width=True):
-                j['g'] += 1; s.ml += 1; s.eventos.append({'Minuto': min_act, 'Evento': f'⚽ GOL: {j["n"]}', 'Cuarteto': get_cuarteto()}); st.rerun()
-            if b3.button("🟨", key=f"ty_{idx}", use_container_width=True):
-                s.eventos.append({'Minuto': min_act, 'Evento': f'🟨 Amarilla: {j["n"]}', 'Cuarteto': None})
-            if b4.button("🟥", key=f"tr_{idx}", use_container_width=True):
-                s.eventos.append({'Minuto': min_act, 'Evento': f'🟥 Roja: {j["n"]}', 'Cuarteto': None})
+# LÍNEA EVENTOS
+if s.eventos:
+    tl = "".join([f"<span style='background:#004a99;color:white;padding:1px 3px;border-radius:3px;font-size:0.65rem;margin-right:2px;'>{e['min']}' {e['info']}</span>" for e in s.eventos])
+    st.markdown(f"<div class='horizontal-timeline'>{tl}</div>", unsafe_allow_html=True)
 
-    st.markdown("<div class='porteria-section'>", unsafe_allow_html=True)
-    p1, p2, p3, p4 = st.columns(4)
-    if p1.button("🧤 M ✅"): s.pm_ok += 1
-    if p2.button("🧤 M ❌"): s.pm_err += 1
-    if p3.button("👟 P ✅"): s.pp_ok += 1
-    if p4.button("👟 P ❌"): s.pp_err += 1
-    st.markdown("</div>", unsafe_allow_html=True)
+# SCORE BAR
+c1, c2, c3, c4 = st.columns([1, 1, 2, 1])
+with c1: 
+    st.metric("DB", s.ml, delta_color="off")
+    if st.button("⚽", key="g1", use_container_width=True): 
+        s.ml+=1; s.eventos.append({'min':min_act,'info':'⚽DB'}); st.rerun()
+with c2: 
+    st.metric("RIV", s.mr, delta_color="off")
+    if st.button("⚽", key="g2", use_container_width=True): 
+        s.mr+=1; s.eventos.append({'min':min_act,'info':'⚽RIV'}); st.rerun()
+with c3:
+    m1, se1 = divmod(int(s.t1_abs), 60); m2, se2 = divmod(int(s.t2_abs), 60)
+    st.markdown(f"<div style='font-size: 0.6rem; color: #666; text-align: center; margin-bottom: -2px;'>1T {m1:02d}:{se1:02d} | 2T {m2:02d}:{se2:02d}</div>", unsafe_allow_html=True)
+    s.pa = st.selectbox("", ["1T","2T"], index=0 if s.pa=="1T" else 1, label_visibility="collapsed")
+with c4:
+    if st.button("🗑️", use_container_width=True): st.session_state.clear(); st.rerun()
 
-with tabs[2]:
-    st.subheader("📜 Historial de Partido")
-    if s.eventos:
-        # Convertimos a DataFrame para mostrar
-        df_hist = pd.DataFrame(s.eventos[::-1])
-        # Limpiamos el valor de Cuarteto para que no se vea 'None' feo
-        df_hist['Cuarteto'] = df_hist['Cuarteto'].fillna("-")
-        st.table(df_hist)
-    else:
-        st.info("Aún no hay eventos registrados.")
+# JUGADORES (6 por fila)
+st.markdown("<div style='margin-bottom:1px;'></div>", unsafe_allow_html=True)
+cols = st.columns(6)
+for i, j in enumerate(s.js):
+    with cols[i%6]:
+        cl = "pista-activa" if j['p'] else "banquillo-espera"
+        st.markdown(f"<div class='{cl}'>", unsafe_allow_html=True)
+        cur = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0); mc, vc = divmod(int(cur), 60)
+        tot = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0); mt, vt = divmod(int(tot), 60)
+        st.markdown(f"<b style='font-size:0.7rem;'>{j['n']}</b>", 1)
+        st.markdown(f"<b style='font-size:1rem; line-height: 1.1;'>{mc:02d}:{vc:02d}</b>", 1)
+        st.markdown(f"<span style='font-size:0.6rem; line-height: 1;'>Σ{mt:02d}:{vt:02d} R:{j['r']}</span>", 1)
+        if st.button("🔄", key=f"c_{i}", use_container_width=True):
+            if not j["p"] and sum(1 for x in s.js if x["p"]) < 5:
+                j["p"], j["i"], j["r"] = True, (ah if s.on else None), j["r"]+1; j["tt"] = 0.0
+            elif j["p"]:
+                if s.on and j["i"]: d = ah-j["i"]; j["tot"]+=d; j["tt"]+=d
+                j["p"], j["i"] = False, None
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
-with tabs[3]:
-    st.subheader("📥 Exportar")
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        pd.DataFrame([{"Rival": s.rv, "LUD": s.ml, "RIV": s.mr, "Faltas LUD": s.fl, "Faltas RIV": s.fr}]).to_excel(writer, sheet_name='Resumen', index=False)
-        pd.DataFrame(s.eventos).to_excel(writer, sheet_name='Historial', index=False)
-        pd.DataFrame([{"Jugador": j['n'], "Min": round(j['tot']/60, 2), "Goles": j['g']} for j in jugadores_activos]).to_excel(writer, sheet_name='Jugadores', index=False)
-    st.download_button("📥 DESCARGAR EXCEL", output.getvalue(), f"LUD_{s.rv}.xlsx", use_container_width=True)
-
-with tabs[4]:
-    s.rv, s.ciudad = st.text_input("Rival", s.rv).upper(), st.text_input("Ciudad", s.ciudad).upper()
-    if st.button("🗑️ RESET"): st.session_state.clear(); st.rerun()
+# FOOTER Ultra-Compacto
+st.markdown("<div class='footer-control'>", unsafe_allow_html=True)
+f1, f2, f3 = st.columns([2, 3, 2])
+with f1:
+    st.markdown(f"<span style='font-size:0.65rem; color:#666;'>Faltas DB: {s.fl}</span>", unsafe_allow_html=True)
+    st.button("F+", key="fdb", use_container_width=True, on_click=lambda: setattr(s, 'fl', s.fl+1))
+    if st.button("TM DB", key="tm_l_b", use_container_width=True): stop_match(); s.tm, s.tm_i = True, time.time(); st.rerun()
+with f2:
+    t1, t2 = st.columns(2)
+    t1.button(f"🟨 {s.al}", key="al_b", use_container_width=True, on_click=lambda: setattr(s, 'al', s.al+1))
+    t2.button(f"🧤 {s.pm}", key="pm_b", use_container_width=True, on_click=lambda: setattr(s, 'pm', s.pm+1))
+    t1.button(f"🟥 {s.rl}", key="rl_b", use_container_width=True, on_click=lambda: setattr(s, 'rl', s.rl+1))
+    t2.button(f"👟 {s.pp}", key="pp_b", use_container_width=True, on_click=lambda: setattr(s, 'pp', s.pp+1))
+with f3:
+    st.markdown(f"<span style='font-size:0.65rem; color:#666;'>Faltas RIV: {s.fr}</span>", unsafe_allow_html=True)
+    st.button("F+", key="friv", use_container_width=True, on_click=lambda: setattr(s, 'fr', s.fr+1))
+    if st.button("TM RIV", key="tm_r_b", use_container_width=True): stop_match(); s.tm, s.tm_i = True, time.time(); st.rerun()
+st.markdown("</div>", unsafe_allow_html=True)
