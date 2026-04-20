@@ -6,7 +6,7 @@ from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
 # --- CONFIGURACIÓN ---
-st.set_page_config(page_title="LUD Match Control v36.3", layout="wide")
+st.set_page_config(page_title="LUD Match Control v36.4", layout="wide")
 
 # --- INICIALIZACIÓN ---
 if 'js' not in st.session_state:
@@ -24,7 +24,7 @@ if 'js' not in st.session_state:
 
 s = st.session_state
 
-# --- CSS MEJORADO PARA PORTEROS ---
+# --- CSS MEJORADO CON ICONOS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;900&display=swap');
@@ -36,10 +36,9 @@ st.markdown("""
     .stadium-clock { font-family: 'Roboto Mono'; font-size: 3rem !important; font-weight: 700; }
     .faltas-banner { background: #000; color: #FFCC00; padding: 3px; border-radius: 0 0 8px 8px; text-align: center; font-weight: 900; margin-bottom: 8px; }
     
-    .card { border-radius: 6px; padding: 4px; text-align: center; border: 1px solid #333; margin-bottom: 4px; height: 110px; display: flex; flex-direction: column; justify-content: center; }
+    .card { border-radius: 6px; padding: 4px; text-align: center; border: 1px solid #333; margin-bottom: 4px; height: 112px; display: flex; flex-direction: column; justify-content: center; }
     .player-name { font-size: 0.85rem !important; font-weight: 900 !important; text-transform: uppercase; }
     
-    /* Contraste dinámico */
     .banquillo { background-color: #D1D1D1 !important; color: #000 !important; }
     .banquillo .time-large { color: #000 !important; }
     .en-pista { color: #FFF !important; }
@@ -55,14 +54,12 @@ st.markdown("""
     
     @keyframes blinker { 50% { opacity: 0.7; } }
     
-    /* Estilo botones compactos */
-    .stButton > button { height: 26px !important; font-size: 0.7rem !important; border-radius: 4px; padding: 0px 1px !important; }
-    .btn-ok { color: #28a745 !important; font-weight: bold !important; border: 1px solid #28a745 !important; }
-    .btn-err { color: #dc3545 !important; font-weight: bold !important; border: 1px solid #dc3545 !important; }
+    /* Botones de Iconos */
+    .stButton > button { height: 28px !important; font-size: 0.8rem !important; border-radius: 4px; padding: 0px !important; }
     </style>
     """, unsafe_allow_html=True)
 
-st_autorefresh(1000, key="refresh_v36_3")
+st_autorefresh(1000, key="refresh_v36_4")
 ah = time.time()
 tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr_total); mv, sv = divmod(int(rem), 60)
@@ -90,7 +87,6 @@ def toggle_timer():
 tabs = st.tabs(["🎮 PARTIDO", "⚠️ INCIDENCIAS", "📊 TOTALES", "📜 HISTORIAL", "📥 EXPORTAR", "⚙️ CONFIG"])
 
 with tabs[0]:
-    # Marcador
     st.markdown(f"""<div class="scoreboard-container"><div class="match-info-sub">{s.fecha} — {s.ciudad}</div><span class="score-number">{s.ml}</span><span class="stadium-clock">&nbsp;&nbsp;{mv:02d}:{sv:02d}&nbsp;&nbsp;</span><span class="score-number">{s.mr}</span></div><div class="faltas-banner">FALTAS: LUD {s.fl} — {s.rv} {s.fr}</div>""", unsafe_allow_html=True)
 
     c_top = st.columns([2, 1, 1, 1])
@@ -110,7 +106,6 @@ with tabs[0]:
             s.finalizado = True
         st.rerun()
 
-    # Jugadores Dinámicos
     jugadores_activos = [j for j in s.js if j['n'].strip() != ""]
     cols = st.columns(3)
     p_count = sum(1 for j in jugadores_activos if j['p'] and j['n'] not in s.porteros)
@@ -122,9 +117,8 @@ with tabs[0]:
             cl = "banquillo" if not j['p'] else ("en-pista " + ("pista-portero" if es_p else ("pista-verde" if cur < 240 else ("pista-naranja" if cur < 360 else "pista-roja"))))
             st.markdown(f"<div class='card {cl}'><div class='player-name'>{j['n']}</div><div class='time-large'>{int(cur//60):02d}:{int(cur%60):02d}</div><div class='time-total'>Σ {int(tot//60):02d}:{int(tot%60):02d} | ⚽ {j['g']}</div></div>", unsafe_allow_html=True)
             
-            # FILA DE BOTONES DE ACCIÓN
             c1, c2 = st.columns([1, 1])
-            if c1.button("🔄", key=f"c_{idx}", use_container_width=True, help="Cambiar entrada/salida"):
+            if c1.button("🔄 Cambio", key=f"c_{idx}", use_container_width=True):
                 if not j["p"]:
                     if es_p or p_count < 4:
                         j["p"] = True
@@ -136,20 +130,22 @@ with tabs[0]:
             
             with c2:
                 if es_p:
-                    # Sistema de Portería Compacto
-                    cm1, cm2, cp1, cp2 = st.columns(4)
-                    if cm1.button("M√", key=f"m_v_{idx}"): s.pm_ok += 1
-                    if cm2.button("M×", key=f"m_x_{idx}"): s.pm_err += 1
-                    if cp1.button("P√", key=f"p_v_{idx}"): s.pp_ok += 1
-                    if cp2.button("P×", key=f"p_x_{idx}"): s.pp_err += 1
+                    # Iconos para Porteros
+                    cm, cp = st.columns(2)
+                    with cm:
+                        if st.button("🧤✅", key=f"m_v_{idx}", help="Saque Mano OK"): s.pm_ok += 1
+                        if st.button("🧤❌", key=f"m_x_{idx}", help="Saque Mano Error"): s.pm_err += 1
+                    with cp:
+                        if st.button("👟✅", key=f"p_v_{idx}", help="Saque Pie OK"): s.pp_ok += 1
+                        if st.button("👟❌", key=f"p_x_{idx}", help="Saque Pie Error"): s.pp_err += 1
                 else:
-                    if st.button("⚽", key=f"g_{idx}", use_container_width=True):
+                    if st.button("⚽ GOL", key=f"g_{idx}", use_container_width=True):
                         j['g'] += 1; s.ml += 1; s.eventos.append({'Tiempo': min_act, 'Evento': f'⚽ GOL: {j["n"]}', 'Cuarteto': get_cuarteto()}); st.rerun()
 
 with tabs[2]:
     st.subheader("📊 Totales")
     def p_calc(o, e): t=o+e; return f"{(o/t*100):.1f}%" if t>0 else "0.0%"
-    st.write(f"🧤 **Mano:** {s.pm_ok} OK / {s.pm_err} ERR ({p_calc(s.pm_ok, s.pm_err)}) | 👟 **Pie:** {s.pp_ok} OK / {s.pp_err} ERR ({p_calc(s.pp_ok, s.pp_err)})")
+    st.write(f"🧤 **Mano:** {s.pm_ok} ✅ / {s.pm_err} ❌ ({p_calc(s.pm_ok, s.pm_err)}) | 👟 **Pie:** {s.pp_ok} ✅ / {s.pp_err} ❌ ({p_calc(s.pp_ok, s.pp_err)})")
     st.divider()
     st.table(pd.DataFrame([{"Jugador": j['n'], "Goles": j['g'], "Tiempo": f"{int(j['tot']//60):02d}:{int(j['tot']%60):02d}", "Rot": j['r']} for j in jugadores_activos]))
 
@@ -157,21 +153,22 @@ with tabs[4]:
     output = io.BytesIO()
     try:
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            pd.DataFrame([{"Rival": s.rv, "Goles LUD": s.ml, "Goles Rival": s.mr, "Saques M OK": s.pm_ok, "Saques P OK": s.pp_ok}]).to_excel(writer, sheet_name='Resumen', index=False)
+            pd.DataFrame([{"Rival": s.rv, "Goles LUD": s.ml, "Goles Rival": s.mr, "Mano OK": s.pm_ok, "Pie OK": s.pp_ok}]).to_excel(writer, sheet_name='Resumen', index=False)
             pd.DataFrame(s.eventos).to_excel(writer, sheet_name='Historial', index=False)
         st.download_button("📥 DESCARGAR EXCEL", output.getvalue(), f"LUD_{s.rv}.xlsx", use_container_width=True)
-    except: st.error("Falta xlsxwriter")
+    except: st.error("Instala xlsxwriter")
 
 with tabs[5]:
     st.subheader("⚙️ Configuración")
     s.rv = st.text_input("Rival", s.rv).upper()
     s.ciudad = st.text_input("Ciudad", s.ciudad).upper()
+    s.fecha = st.text_input("Fecha", s.fecha)
     st.divider()
     new_names = []
     cols_cfg = st.columns(2)
     for i in range(14):
         with (cols_cfg[0] if i < 7 else cols_cfg[1]):
-            new_names.append(st.text_input(f"P {i+1}", value=s.js[i]['n'] if i < len(s.js) else "", key=f"cfg_{i}"))
+            new_names.append(st.text_input(f"Posición {i+1} {'(P)' if i<2 else ''}", value=s.js[i]['n'] if i < len(s.js) else "", key=f"cfg_{i}"))
     if st.button("💾 GUARDAR PLANTILLA"):
         s.js = [{"n":x,"tt":0.0,"tot":0.0,"r":0,"g":0,"i":None,"p":False} for x in new_names]
         s.porteros = [new_names[0], new_names[1]]; st.rerun()
