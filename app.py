@@ -6,7 +6,7 @@ from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
 # --- CONFIGURACIÓN ---
-st.set_page_config(page_title="LUD Control v37.3", layout="wide")
+st.set_page_config(page_title="LUD Control v37.4", layout="wide")
 
 # --- INICIALIZACIÓN ---
 if 'js' not in st.session_state:
@@ -43,16 +43,26 @@ st.markdown("""
     @keyframes blinker { 50% { opacity: 0.7; } }
     .stButton > button { height: 28px !important; font-size: 0.7rem !important; border-radius: 3px; font-weight: bold !important; padding: 0px !important; }
     .porteria-section { background: #ffffff; padding: 8px; border-radius: 8px; border: 2px solid #4B2E2A; margin-top: 10px; }
+    .stats-box { background: #e9ecef; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #ced4da; }
     </style>
     """, unsafe_allow_html=True)
 
-st_autorefresh(1000, key="refresh_v37_3")
+st_autorefresh(1000, key="refresh_v37_4")
 ah = time.time()
 tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr_total); mv, sv = divmod(int(rem), 60)
 min_act = f"{s.periodo} {mv:02d}:{sv:02d}"
 
-# --- LOGICA DE TIEMPOS ---
+# --- FUNCIONES AUXILIARES ---
+def p_calc(o, e):
+    total = o + e
+    return f"{(o / total * 100):.1f}%" if total > 0 else "0%"
+
+def get_cuarteto():
+    pista = [j['n'] for j in s.js if j['p'] and j['n'] not in s.porteros]
+    while len(pista) < 4: pista.append("-")
+    return ", ".join(pista[:4])
+
 def toggle_timer():
     now = time.time()
     if not s.on:
@@ -65,37 +75,20 @@ def toggle_timer():
         s.on, s.ic = False, None
         for j in s.js:
             if j["p"] and j["i"] and j["n"] not in s.porteros:
-                d = now - j["i"]
-                j["tot"] += d
-                j["tt"] += d
-                j["i"] = None
+                d = now - j["i"]; j["tot"] += d; j["tt"] += d; j["i"] = None
 
 def terminar_periodo():
-    # 1. Parar crono y asegurar que se sumen los tiempos activos
-    if s.on:
-        toggle_timer()
-    
-    # 2. Resetear cronos de rotación actual (tarjetas) pero no el TOTAL (tot)
+    if s.on: toggle_timer()
     for j in s.js:
         j["tt"] = 0.0
         j["i"] = None
-        # Opcional: Si quieres que todos empiecen en el banquillo en el 2T, descomenta:
-        # j["p"] = False 
-    
     if s.periodo == "1ª PARTE":
-        s.periodo = "2ª PARTE"
-        s.ta = 0.0
-        s.fl, s.fr = 0, 0
+        s.periodo = "2ª PARTE"; s.ta = 0.0; s.fl, s.fr = 0, 0
         s.eventos.append({'Minuto': 'FIN 1T', 'Evento': '🏁 FINAL 1ª PARTE', 'Cuarteto': '-'})
     else:
         s.finalizado = True
         s.eventos.append({'Minuto': 'FIN 2T', 'Evento': '🏁 FINAL PARTIDO', 'Cuarteto': '-'})
     st.rerun()
-
-def get_cuarteto():
-    pista = [j['n'] for j in s.js if j['p'] and j['n'] not in s.porteros]
-    while len(pista) < 4: pista.append("-")
-    return ", ".join(pista[:4])
 
 # --- UI ---
 tabs = st.tabs(["🎮 PARTIDO", "📊 TOTALES", "📜 HISTORIAL", "📥 EXPORTAR", "⚙️ CONFIG"])
@@ -126,18 +119,8 @@ with tabs[0]:
         with cols[idx % 3]:
             es_p = j['n'] in s.porteros
             cur_rot = j["tt"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-            tot_acum = j["tot"] + (ah-j["i"] if s.on and j["p"] and j["i"] else 0)
-            
             cl = "banquillo" if not j['p'] else ("en-pista " + ("pista-portero" if es_p else ("pista-verde" if cur_rot < 240 else "pista-roja")))
-            
-            st.markdown(f"""
-                <div class='card {cl}'>
-                    <div class='player-name'>{j['n']}</div>
-                    <div class='time-large'>{int(cur_rot//60):02d}:{int(cur_rot%60):02d}</div>
-                    <div style='font-size:0.65rem;'>PARTE: {int(cur_rot//60):02d}:{int(cur_rot%60):02d} | ⚽ {j['g']}</div>
-                </div>
-            """, unsafe_allow_html=True)
-            
+            st.markdown(f"<div class='card {cl}'><div class='player-name'>{j['n']}</div><div class='time-large'>{int(cur_rot//60):02d}:{int(cur_rot%60):02d}</div><div style='font-size:0.65rem;'>PARTE: {int(cur_rot//60):02d}:{int(cur_rot%60):02d} | ⚽ {j['g']}</div></div>", unsafe_allow_html=True)
             b1, b2, b3, b4 = st.columns([1.5, 1, 0.8, 0.8])
             if b1.button("🔄", key=f"c_{idx}", use_container_width=True):
                 if not j["p"]:
@@ -164,49 +147,53 @@ with tabs[0]:
     st.markdown("</div>", unsafe_allow_html=True)
 
 with tabs[1]:
-    st.subheader("📊 Totales Acumulados (Ambos Tiempos)")
+    st.subheader("📊 Totales y Rendimiento")
+    
+    # 🧤 SECCIÓN PORTERÍA (RECUPERADA)
+    st.markdown("#### 🧤 Estadísticas de Portería")
+    c_pm, c_pp = st.columns(2)
+    with c_pm:
+        st.markdown(f"""<div class="stats-box"><b>Saques de Mano</b><br><span style='color:green; font-size:1.5rem;'>{p_calc(s.pm_ok, s.pm_err)}</span><br>✅ {s.pm_ok} | ❌ {s.pm_err}</div>""", unsafe_allow_html=True)
+    with c_pp:
+        st.markdown(f"""<div class="stats-box"><b>Saques de Pie</b><br><span style='color:blue; font-size:1.5rem;'>{p_calc(s.pp_ok, s.pp_err)}</span><br>✅ {s.pp_ok} | ❌ {s.pp_err}</div>""", unsafe_allow_html=True)
+    
+    st.divider()
+    
+    # ⏱️ TABLA DE TIEMPOS
     data_tiempos = []
     for j in jugadores_activos:
-        # Sumamos el tiempo que lleva en pista si el crono está ON
         extra = (ah - j["i"] if s.on and j["p"] and j["i"] else 0)
         total_real = j["tot"] + extra
         m, s_val = divmod(int(total_real), 60)
-        data_tiempos.append({
-            "Jugador": j['n'],
-            "Goles": j['g'],
-            "Tiempo Total": f"{m:02d}:{s_val:02d}",
-            "Rotaciones": j['r']
-        })
+        data_tiempos.append({"Jugador": j['n'], "Goles": j['g'], "Tiempo Total": f"{m:02d}:{s_val:02d}", "Rotaciones": j['r']})
     st.table(pd.DataFrame(data_tiempos))
 
 with tabs[2]:
     if s.eventos:
-        df_hist = pd.DataFrame(s.eventos[::-1]).fillna("-")
-        st.table(df_hist)
+        st.table(pd.DataFrame(s.eventos[::-1]).fillna("-"))
 
 with tabs[3]:
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        pd.DataFrame([{"Rival": s.rv, "LUD": s.ml, "RIV": s.mr, "Faltas LUD": s.fl, "Faltas RIV": s.fr}]).to_excel(writer, sheet_name='Resumen', index=False)
+        pd.DataFrame([{"Rival": s.rv, "LUD": s.ml, "RIV": s.mr, "Saques M OK": s.pm_ok, "Saques P OK": s.pp_ok}]).to_excel(writer, sheet_name='Resumen', index=False)
         pd.DataFrame(s.eventos).to_excel(writer, sheet_name='Historial', index=False)
-        pd.DataFrame([{"Jugador": j['n'], "Min": round(j['tot']/60, 2), "Goles": j['g']} for j in jugadores_activos]).to_excel(writer, sheet_name='Jugadores', index=False)
+        pd.DataFrame([{"Jugador": j['n'], "Goles": j['g'], "Min": round(j['tot']/60, 2)} for j in jugadores_activos]).to_excel(writer, sheet_name='Jugadores', index=False)
     st.download_button("📥 EXCEL", output.getvalue(), f"LUD_{s.rv}.xlsx", use_container_width=True)
 
 with tabs[4]:
-    c_config1, c_config2 = st.columns(2)
-    with c_config1:
+    c_cf1, c_cf2 = st.columns(2)
+    with c_cf1:
         s.rv = st.text_input("Rival", s.rv).upper()
         s.ciudad = st.text_input("Ciudad", s.ciudad).upper()
-    with c_config2:
+    with c_cf2:
         s.fecha = st.text_input("Fecha", s.fecha)
     st.divider()
     new_names = []
-    col_names1, col_names2 = st.columns(2)
+    col_n1, col_n2 = st.columns(2)
     for i in range(14):
-        with (col_names1 if i < 7 else col_names2):
-            val_nombre = st.text_input(f"Jugador {i+1}", value=s.js[i]['n'] if i < len(s.js) else "", key=f"edit_n_{i}")
-            new_names.append(val_nombre)
-    if st.button("💾 GUARDAR CAMBIOS PLANTILLA"):
+        with (col_n1 if i < 7 else col_n2):
+            new_names.append(st.text_input(f"Jugador {i+1}", value=s.js[i]['n'] if i < len(s.js) else "", key=f"ed_n_{i}"))
+    if st.button("💾 GUARDAR CAMBIOS"):
         s.js = [{"n":x,"tt":0.0,"tot":0.0,"r":0,"g":0,"i":None,"p":False} for x in new_names]
         st.rerun()
-    if st.button("🗑️ RESET TOTAL"): st.session_state.clear(); st.rerun()
+    if st.button("🗑️ RESET"): st.session_state.clear(); st.rerun()
