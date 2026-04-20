@@ -6,7 +6,7 @@ from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
 # --- CONFIGURACIÓN ---
-st.set_page_config(page_title="Match Control Universal v38.2", layout="wide")
+st.set_page_config(page_title="Match Control Universal v38.3", layout="wide")
 
 # --- INICIALIZACIÓN ---
 if 'js' not in st.session_state:
@@ -23,26 +23,23 @@ if 'js' not in st.session_state:
 
 s = st.session_state
 
-# --- CSS PARA FORMATO HORIZONTAL (5 COLUMNAS) ---
+# --- CSS PARA FORMATO HORIZONTAL Y BOTONES XL ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@400;900&display=swap');
     html, body, [class*="css"] { font-family: 'Roboto', sans-serif; background-color: #f0f2f6; }
-    
-    /* Reducción de márgenes laterales para iPad horizontal */
     .block-container { padding: 0.1rem 0.5rem !important; }
     
     .scoreboard-container { background: #4B2E2A; padding: 4px; border-radius: 8px 8px 0 0; color: white; text-align: center; }
     .score-number { font-size: 2rem !important; font-weight: 900; font-family: 'Roboto Mono'; line-height: 1; }
     .stadium-clock { font-family: 'Roboto Mono'; font-size: 2.5rem !important; font-weight: 700; line-height: 1; }
     
-    /* Tarjetas más bajas y anchas para horizontal */
-    .card { border-radius: 6px; padding: 3px; text-align: center; border: 1px solid #333; margin-bottom: 2px; height: 85px; display: flex; flex-direction: column; justify-content: center; }
-    .player-name { font-size: 0.75rem !important; font-weight: 900 !important; text-transform: uppercase; margin-bottom: 1px; overflow: hidden; white-space: nowrap; }
+    .card { border-radius: 6px; padding: 4px; text-align: center; border: 1px solid #333; margin-bottom: 2px; height: 95px; display: flex; flex-direction: column; justify-content: center; }
+    .player-name { font-size: 0.75rem !important; font-weight: 900 !important; text-transform: uppercase; margin-bottom: 1px; }
     
     .banquillo { background-color: #D1D1D1 !important; color: #000 !important; }
     .en-pista { color: #FFF !important; }
-    .time-large { font-size: 1.7rem !important; font-weight: 900 !important; font-family: 'Roboto Mono'; line-height: 0.9; }
+    .time-large { font-size: 1.8rem !important; font-weight: 900 !important; font-family: 'Roboto Mono'; line-height: 0.9; }
     
     .pista-portero { background-color: #008080 !important; }
     .pista-verde { background-color: #28a745 !important; }
@@ -50,18 +47,15 @@ st.markdown("""
     
     @keyframes blinker { 50% { opacity: 0.7; } }
     
-    /* Botones ultra compactos para que quepan 4 en fila */
-    .stButton > button { height: 24px !important; font-size: 0.65rem !important; border-radius: 3px; font-weight: bold !important; padding: 0px !important; margin-bottom: 1px !important; }
+    /* Botones Adaptados: Cambio ocupa 50% */
+    .stButton > button { height: 28px !important; font-size: 0.7rem !important; border-radius: 4px; font-weight: bold !important; padding: 0px !important; }
+    .btn-cambio > div > button { font-size: 0.8rem !important; background-color: rgba(255,255,255,0.2) !important; border: 1px solid rgba(0,0,0,0.1) !important; }
     
     .porteria-section { background: #ffffff; padding: 5px; border-radius: 8px; border: 2px solid #4B2E2A; margin-top: 5px; }
-    
-    /* Ajuste de Tabs */
-    .stTabs [data-baseweb="tab-list"] { gap: 2px; }
-    .stTabs [data-baseweb="tab"] { height: 35px; padding: 0px 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-st_autorefresh(1000, key="refresh_v38_2")
+st_autorefresh(1000, key="refresh_v38_3")
 ah = time.time()
 tr_total = s.ta + (ah - s.ic if s.on and s.ic else 0)
 rem = max(0, 1200 - tr_total); mv, sv = divmod(int(rem), 60)
@@ -94,10 +88,10 @@ def toggle_timer():
 tabs = st.tabs(["🎮 PARTIDO", "📊 TOTALES", "📜 HISTORIAL", "📥 EXCEL", "⚙️ CONFIG"])
 
 with tabs[0]:
-    # Marcador compacto
+    # Marcador
     st.markdown(f"""<div class="scoreboard-container"><div style="font-size:0.6rem;">{s.fecha} — {s.ciudad}</div><span class="score-number">{s.ml}</span><span class="stadium-clock">&nbsp;&nbsp;{mv:02d}:{sv:02d}&nbsp;&nbsp;</span><span class="score-number">{s.mr}</span></div>""", unsafe_allow_html=True)
     
-    # Faltas en horizontal (una sola fila)
+    # Faltas
     cf1, cf2, cf3, cf4, cf5, cf6 = st.columns([0.5, 0.5, 2, 2, 0.5, 0.5])
     if cf1.button("➖", key="fl_m"): s.fl = max(0, s.fl-1); st.rerun()
     if cf2.button("➕", key="fl_p"): s.fl += 1; s.eventos.append({'Minuto': min_act, 'Evento': f'FALTA {s.loc}', 'Cuarteto': None}); st.rerun()
@@ -125,9 +119,9 @@ with tabs[0]:
         else: s.finalizado = True; s.eventos.append({'Minuto': 'FIN 2T', 'Evento': '🏁 FINAL PARTIDO', 'Cuarteto': '-'})
         st.rerun()
 
-    # JUGADORES EN 5 COLUMNAS (Para Horizontal)
+    # JUGADORES (5 COLUMNAS)
     jugadores_activos = [j for j in s.js if j['n'].strip() != ""]
-    cols = st.columns(5) # <--- AQUÍ ESTÁ EL CAMBIO A HORIZONTAL
+    cols = st.columns(5)
     p_count = sum(1 for j in jugadores_activos if j['p'] and j['n'] not in s.porteros)
     
     for idx, j in enumerate(jugadores_activos):
@@ -137,22 +131,28 @@ with tabs[0]:
             cl = "banquillo" if not j['p'] else ("en-pista " + ("pista-portero" if es_p else ("pista-verde" if cur_rot < 240 else "pista-roja")))
             st.markdown(f"<div class='card {cl}'><div class='player-name'>{j['n']}</div><div class='time-large'>{fmt_time(cur_rot)}</div><div style='font-size:0.6rem;'>⚽ {j['g']}</div></div>", unsafe_allow_html=True)
             
-            b1, b2, b3, b4 = st.columns([1.2, 0.8, 0.6, 0.6])
-            if b1.button("🔄", key=f"c_{idx}"):
-                if not j["p"]:
-                    if es_p or p_count < 4:
-                        j["p"] = True
-                        if not es_p: j["i"], j["r"], j["tt"] = (ah if s.on else None), j["r"]+1, 0.0
-                else:
-                    if not es_p and s.on and j["i"]: d_t = ah - j["i"]; j["tot"] += d_t; j["tt"] += d_t
-                    j["p"], j["i"] = False, None
-                st.rerun()
-            if b2.button("⚽", key=f"g_{idx}"):
-                j['g'] += 1; s.ml += 1; s.eventos.append({'Minuto': min_act, 'Evento': f'⚽ GOL: {j["n"]}', 'Cuarteto': get_cuarteto()}); st.rerun()
-            if b3.button("🟨", key=f"ty_{idx}"): s.eventos.append({'Minuto': min_act, 'Evento': f'🟨 Amarilla: {j["n"]}', 'Cuarteto': None})
-            if b4.button("🟥", key=f"tr_{idx}"): s.eventos.append({'Minuto': min_act, 'Evento': f'🟥 Roja: {j["n"]}', 'Cuarteto': None})
+            # BOTÓN DE CAMBIO XL (50%) Y EL RESTO (50%)
+            bt_col1, bt_col2 = st.columns([2, 2])
+            with bt_col1:
+                if st.button("🔄 Cambio", key=f"c_{idx}", use_container_width=True):
+                    if not j["p"]:
+                        if es_p or p_count < 4:
+                            j["p"] = True
+                            if not es_p: j["i"], j["r"], j["tt"] = (ah if s.on else None), j["r"]+1, 0.0
+                    else:
+                        if not es_p and s.on and j["i"]: d_t = ah - j["i"]; j["tot"] += d_t; j["tt"] += d_t
+                        j["p"], j["i"] = False, None
+                    st.rerun()
+            
+            with bt_col2:
+                # Sub-columnas para Gol, Amarilla y Roja
+                sub_c1, sub_c2, sub_c3 = st.columns([1, 1, 1])
+                if sub_c1.button("⚽", key=f"g_{idx}"):
+                    j['g'] += 1; s.ml += 1; s.eventos.append({'Minuto': min_act, 'Evento': f'⚽ GOL: {j["n"]}', 'Cuarteto': get_cuarteto()}); st.rerun()
+                if sub_c2.button("🟨", key=f"ty_{idx}"): s.eventos.append({'Minuto': min_act, 'Evento': f'🟨 Amarilla: {j["n"]}', 'Cuarteto': None})
+                if sub_c3.button("🟥", key=f"tr_{idx}"): s.eventos.append({'Minuto': min_act, 'Evento': f'🟥 Roja: {j["n"]}', 'Cuarteto': None})
 
-    # Portería compacta
+    # Portería
     st.markdown("<div class='porteria-section'>", unsafe_allow_html=True)
     p1, p2, p3, p4 = st.columns(4)
     if p1.button("🧤 M ✅", use_container_width=True): s.pm_ok += 1
@@ -166,9 +166,6 @@ with tabs[1]:
     data_res = [{"Jugador": j['n'], "Goles": j['g'], "Tiempo Total": fmt_time(j['tot']), "Rot": j['r']} for j in jugadores_activos]
     st.table(pd.DataFrame(data_res))
 
-with tabs[2]:
-    if s.eventos: st.table(pd.DataFrame(s.eventos[::-1]).fillna("-"))
-
 with tabs[3]:
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -176,7 +173,7 @@ with tabs[3]:
         pd.DataFrame(s.eventos).to_excel(writer, sheet_name='Historial', index=False)
         df_exc = pd.DataFrame([{"Jugador": j['n'], "Goles": j['g'], "Tiempo": fmt_time(j['tot'])} for j in jugadores_activos])
         df_exc.to_excel(writer, sheet_name='Jugadores', index=False)
-    st.download_button("📥 DESCARGAR EXCEL", output.getvalue(), f"Match_{s.loc}_{s.rv}.xlsx", use_container_width=True)
+    st.download_button("📥 EXCEL", output.getvalue(), f"Match_{s.loc}_{s.rv}.xlsx", use_container_width=True)
 
 with tabs[4]:
     st.subheader("⚙️ Configuración")
